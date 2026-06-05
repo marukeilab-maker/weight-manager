@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { Scale, Target, Calendar, Flame, User, Cake, Calculator, Ruler } from "lucide-react";
+import { useState, useRef } from "react";
+import { Scale, Target, Calendar, Flame, User, Cake, Calculator, Ruler, Upload } from "lucide-react";
 import { Profile } from "@/lib/types";
 import { saveProfile, saveWeightRecord } from "@/lib/storage";
 import { today, calcBMR, calcAge, calcBMI } from "@/lib/calculations";
@@ -27,6 +27,30 @@ export default function Onboarding({ onComplete }: Props) {
   const defaultGoalDate = `${yearForDec31}-12-31`;
 
   const [step, setStep] = useState(0); // 0:案内 / 1:基本情報
+  const [importMsg, setImportMsg] = useState("");
+  const importRef = useRef<HTMLInputElement>(null);
+
+  const BACKUP_KEYS = ["wm_profile", "wm_records", "wm_meals", "wm_exercises", "wm_meal_dishes"];
+
+  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target?.result as string);
+        BACKUP_KEYS.forEach((k) => {
+          if (data[k] !== undefined) localStorage.setItem(k, JSON.stringify(data[k]));
+        });
+        setImportMsg("復元完了！読み込みます…");
+        setTimeout(() => window.location.reload(), 1200);
+      } catch {
+        setImportMsg("ファイルの形式が正しくありません");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }
   const [gender, setGender] = useState<"male" | "female">("male");
   const [birthdate, setBirthdate] = useState("");
   const [height, setHeight] = useState("");
@@ -131,6 +155,19 @@ export default function Onboarding({ onComplete }: Props) {
               はじめる 🚀
             </button>
             <p className="text-[10px] text-gray-400 text-center mt-2">次の画面で基本情報を設定します（後から変更OK）</p>
+
+            <button
+              onClick={() => importRef.current?.click()}
+              className="w-full py-3 mt-2 bg-gray-50 border-2 border-gray-200 text-gray-500 font-bold text-sm rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-gray-100"
+            >
+              <Upload size={16} /> データを復元する
+            </button>
+            {importMsg && (
+              <p className={`text-xs text-center font-bold mt-1 ${importMsg.includes("完了") ? "text-green-500" : "text-red-500"}`}>
+                {importMsg}
+              </p>
+            )}
+            <input ref={importRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
           </>
         )}
 
