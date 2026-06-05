@@ -31,6 +31,23 @@ const DISHES_KEY = "wm_meal_dishes";
 type SlotDishes = { [slot in MealSlot]?: Dish[] };
 type AllDishes  = { [date: string]: SlotDishes };
 
+const CUSTOM_HISTORY_KEY = "wm_custom_food_history";
+const MAX_CUSTOM_HISTORY = 20;
+
+function loadCustomHistory(): Dish[] {
+  if (typeof window === "undefined") return [];
+  try { return JSON.parse(localStorage.getItem(CUSTOM_HISTORY_KEY) ?? "[]"); } catch { return []; }
+}
+function saveToCustomHistory(dish: Dish) {
+  const history = loadCustomHistory().filter(d => d.name !== dish.name);
+  history.unshift(dish);
+  localStorage.setItem(CUSTOM_HISTORY_KEY, JSON.stringify(history.slice(0, MAX_CUSTOM_HISTORY)));
+}
+function removeFromCustomHistory(name: string) {
+  const history = loadCustomHistory().filter(d => d.name !== name);
+  localStorage.setItem(CUSTOM_HISTORY_KEY, JSON.stringify(history));
+}
+
 function loadSlotDishes(date: string): SlotDishes {
   if (typeof window === "undefined") return {};
   try {
@@ -59,6 +76,7 @@ export default function MealsPage() {
   const [customKcal, setCustomKcal] = useState("");
   const [flashDish, setFlashDish] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
+  const [customHistory, setCustomHistory] = useState<Dish[]>([]);
   const isAutoDateRef = useRef(true);  // 自動日付モード（手動変更後はfalseに）
 
   // 手動で日付を変更（自動更新を停止）
@@ -71,6 +89,10 @@ export default function MealsPage() {
     setMeal(getMealRecord(date));
     setSlotDishes(loadSlotDishes(date));
   }, [date]);
+
+  useEffect(() => {
+    setCustomHistory(loadCustomHistory());
+  }, []);
 
   // 日付・スロットの自動更新（1分ごと＋画面復帰時）
   useEffect(() => {
@@ -122,8 +144,16 @@ export default function MealsPage() {
     if (!customKcal) return;
     const dish: Dish = { name: customName.trim() || "カスタム料理", kcal: Number(customKcal) };
     addDish(dish);
+    saveToCustomHistory(dish);
+    setCustomHistory(loadCustomHistory());
     setCustomName("");
     setCustomKcal("");
+  }
+
+  // 履歴から削除
+  function deleteFromHistory(name: string) {
+    removeFromCustomHistory(name);
+    setCustomHistory(loadCustomHistory());
   }
 
   // ざっくり入力（食事ごとの目安kcal）
@@ -444,6 +474,34 @@ export default function MealsPage() {
           >
             追加する
           </button>
+
+          {/* 履歴 */}
+          {customHistory.length > 0 && (
+            <div className="mt-4">
+              <p className="text-[10px] font-bold text-gray-400 mb-2">🕘 よく使う料理（タップで追加）</p>
+              <div className="space-y-1.5">
+                {customHistory.map((dish) => (
+                  <div key={dish.name} className="flex items-center gap-2">
+                    <button
+                      onClick={() => addDish(dish)}
+                      className={`flex-1 flex items-center justify-between px-3 py-2 rounded-xl text-left transition-all active:scale-95 ${
+                        flashDish === dish.name ? "bg-green-50 ring-2 ring-green-300" : "bg-gray-50 hover:bg-orange-50"
+                      }`}
+                    >
+                      <span className="text-sm font-bold text-gray-700 truncate">{dish.name}</span>
+                      <span className="text-orange-500 font-black text-sm ml-2 shrink-0">{dish.kcal} kcal</span>
+                    </button>
+                    <button
+                      onClick={() => deleteFromHistory(dish.name)}
+                      className="text-gray-300 hover:text-red-400 transition-colors p-1"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── 食事抜き（料理が未記録の時のみ表示） ── */}
