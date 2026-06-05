@@ -29,6 +29,7 @@ export default function SettingsPage() {
   const [currentWeight, setCurrentWeight] = useState<number | null>(null);
   const [autoApplied, setAutoApplied] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [showMealExercise, setShowMealExercise] = useState(true);
   const importRef = useRef<HTMLInputElement>(null);
 
   const BACKUP_KEYS = ["wm_profile", "wm_records", "wm_meals", "wm_exercises", "wm_meal_dishes"];
@@ -111,6 +112,8 @@ export default function SettingsPage() {
       setGoalDate(d.toISOString().split("T")[0]);
     }
     setLastBackup(localStorage.getItem(LAST_BACKUP_KEY));
+    const showME = localStorage.getItem("wm_show_meal_exercise");
+    if (showME !== null) setShowMealExercise(showME !== "false");
     // 活動レベルの保存値を復元
     const savedActivity = localStorage.getItem("wm_activity_level");
     if (savedActivity) setActivityLevel(savedActivity);
@@ -394,6 +397,32 @@ export default function SettingsPage() {
               身長・誕生日・性別を入力し、体重を1回記録すると自動計算できます
             </p>
           )}
+        </div>
+
+        {/* ── 表示設定 ── */}
+        <p className="text-xs font-black text-gray-400 tracking-wide pt-2 pl-1">表示設定</p>
+        <div className="bg-white rounded-2xl shadow-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-bold text-gray-700">食事・運動タブを表示</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">体重記録だけ使う場合はOFFにできます</p>
+            </div>
+            <button
+              onClick={() => {
+                const next = !showMealExercise;
+                setShowMealExercise(next);
+                localStorage.setItem("wm_show_meal_exercise", String(next));
+                window.dispatchEvent(new Event("wm_settings_changed"));
+              }}
+              className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${
+                showMealExercise ? "bg-orange-500" : "bg-gray-200"
+              }`}
+            >
+              <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                showMealExercise ? "translate-x-6" : "translate-x-0.5"
+              }`} />
+            </button>
+          </div>
         </div>
 
         {/* ── データ管理 ── */}
