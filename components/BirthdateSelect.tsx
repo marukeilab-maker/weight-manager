@@ -29,7 +29,8 @@ export default function BirthdateSelect({
   };
 
   const selCls =
-    "w-24 border-2 border-gray-200 rounded-xl px-2 py-2.5 text-sm font-bold text-center bg-white focus:border-teal-500 outline-none appearance-none";
+    "w-24 border-2 border-gray-200 rounded-xl px-2 py-2.5 text-sm font-bold text-center bg-white focus:border-teal-500 outline-none appearance-none"
+    + " [text-align-last:center]";
 
   return (
     <div className="flex gap-2 justify-center">
