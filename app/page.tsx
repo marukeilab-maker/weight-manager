@@ -34,6 +34,7 @@ export default function HomePage() {
   const [saved, setSaved] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [now, setNow] = useState(new Date());
+  const [showMealExercise, setShowMealExercise] = useState(true);
 
   const loadData = useCallback(() => {
     const p = getProfile();
@@ -52,6 +53,14 @@ export default function HomePage() {
   useEffect(() => {
     setMounted(true);
     loadData();
+    const v = localStorage.getItem("wm_show_meal_exercise");
+    setShowMealExercise(v !== "false");
+    const onChanged = () => {
+      const v2 = localStorage.getItem("wm_show_meal_exercise");
+      setShowMealExercise(v2 !== "false");
+    };
+    window.addEventListener("wm_settings_changed", onChanged);
+    return () => window.removeEventListener("wm_settings_changed", onChanged);
   }, [loadData]);
 
   // 日付・データの自動更新（1分ごと＋画面復帰時＋フォーカス時）
@@ -235,7 +244,7 @@ export default function HomePage() {
         {displayBmi !== null && <BMICard bmi={displayBmi} height={profile.height} currentWeight={currentWeight} age={age} gender={profile.gender} />}
 
         {/* Calorie summary */}
-        <div className="bg-white rounded-2xl shadow-lg p-4">
+        {showMealExercise && <div className="bg-white rounded-2xl shadow-lg p-4">
           <h3 className="font-bold text-gray-700 mb-3 text-sm">⚖️ 今日のカロリー収支</h3>
 
           {/* メイン：グレー背景＋色付き数字（ラベルも数字と色を合わせて見やすく） */}
@@ -353,7 +362,7 @@ export default function HomePage() {
               <span>目標 {profile.targetCalories} kcal</span>
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* フッターロゴ */}
         <div className="flex justify-center pt-5 pb-3">
