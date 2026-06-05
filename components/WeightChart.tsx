@@ -21,6 +21,7 @@ type Range = "week" | "month" | "all";
 interface Props {
   records: WeightRecord[];
   goalWeight?: number;
+  showCaloriesOption?: boolean;
 }
 
 interface ChartPoint {
@@ -31,9 +32,12 @@ interface ChartPoint {
   completeness?: number; // 0-1（朝・昼・夕の何食記録されたか / 3）
 }
 
-export default function WeightChart({ records, goalWeight }: Props) {
+export default function WeightChart({ records, goalWeight, showCaloriesOption = true }: Props) {
   const [range, setRange] = useState<Range>("week");
   const [showCalories, setShowCalories] = useState(true);
+
+  // 食事・運動タブOFF時はカロリー非表示に強制
+  const canShowCalories = showCaloriesOption;
   const [data, setData] = useState<ChartPoint[]>([]);
 
   useEffect(() => {
@@ -167,18 +171,20 @@ export default function WeightChart({ records, goalWeight }: Props) {
       </div>
 
       {/* カロリー表示トグル */}
-      <div className="flex justify-end mb-2">
-        <button
-          onClick={() => setShowCalories((v) => !v)}
-          className={`text-[10px] px-2 py-0.5 rounded-full font-bold transition-all ${
-            showCalories
-              ? "bg-blue-100 text-blue-600"
-              : "bg-gray-100 text-gray-400"
-          }`}
-        >
-          {showCalories ? "📊 カロリー収支 ON" : "📊 カロリー収支 OFF"}
-        </button>
-      </div>
+      {canShowCalories && (
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={() => setShowCalories((v) => !v)}
+            className={`text-[10px] px-2 py-0.5 rounded-full font-bold transition-all ${
+              showCalories
+                ? "bg-blue-100 text-blue-600"
+                : "bg-gray-100 text-gray-400"
+            }`}
+          >
+            {showCalories ? "📊 カロリー収支 ON" : "📊 カロリー収支 OFF"}
+          </button>
+        </div>
+      )}
 
       {data.length === 0 ? (
         <div className="h-40 flex items-center justify-center text-gray-400 text-sm">
@@ -196,7 +202,7 @@ export default function WeightChart({ records, goalWeight }: Props) {
               orientation="left"
               label={{ value: "kg", angle: 0, position: "insideTopLeft", fontSize: 9, fill: "#999", dx: 22, dy: -2 }}
             />
-            {showCalories && (
+            {canShowCalories && showCalories && (
               <YAxis
                 yAxisId="calorie"
                 domain={[-calMax, calMax]}
@@ -219,7 +225,7 @@ export default function WeightChart({ records, goalWeight }: Props) {
               }) as never}
             />
             {/* カロリー収支バー（背景） */}
-            {showCalories && (
+            {canShowCalories && showCalories && (
               <Bar
                 yAxisId="calorie"
                 dataKey="calorieBalance"
@@ -255,7 +261,7 @@ export default function WeightChart({ records, goalWeight }: Props) {
             )}
 
             {/* カロリー0ライン */}
-            {showCalories && (
+            {canShowCalories && showCalories && (
               <ReferenceLine yAxisId="calorie" y={0} stroke="#94a3b8" strokeDasharray="2 2" strokeWidth={1} />
             )}
 
@@ -305,7 +311,7 @@ export default function WeightChart({ records, goalWeight }: Props) {
               <span className="w-3 rounded-full bg-gradient-to-r from-orange-600 to-orange-400 inline-block" style={{ height: 3 }} />
               トレンド（7日平均）
             </span>
-            {showCalories && (
+            {canShowCalories && showCalories && (
               <span className="flex items-center gap-1">
                 <span className="inline-flex">
                   <span className="w-2 h-2.5 rounded-sm bg-green-300" />
@@ -315,7 +321,7 @@ export default function WeightChart({ records, goalWeight }: Props) {
               </span>
             )}
           </div>
-          {showCalories && (
+          {canShowCalories && showCalories && (
             <div className="flex justify-center gap-2 text-[9px] text-gray-400">
               <span>濃さ = 記録した食事数：</span>
               <span className="flex items-center gap-0.5">

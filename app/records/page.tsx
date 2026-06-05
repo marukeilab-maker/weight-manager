@@ -17,6 +17,7 @@ export default function RecordsPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [addDate, setAddDate] = useState(today());
   const [addWeight, setAddWeight] = useState("");
+  const [showMealExercise, setShowMealExercise] = useState(true);
 
   const reload = () => {
     setRecords(getWeightRecords().slice().reverse());
@@ -26,12 +27,17 @@ export default function RecordsPage() {
 
   useEffect(() => {
     reload();
+    const v = localStorage.getItem("wm_show_meal_exercise");
+    setShowMealExercise(v !== "false");
+    const onChanged = () => setShowMealExercise(localStorage.getItem("wm_show_meal_exercise") !== "false");
     // 画面復帰時・フォーカス時に再読み込み（他ページで保存した記録を反映）
     document.addEventListener("visibilitychange", reload);
     window.addEventListener("focus", reload);
+    window.addEventListener("wm_settings_changed", onChanged);
     return () => {
       document.removeEventListener("visibilitychange", reload);
       window.removeEventListener("focus", reload);
+      window.removeEventListener("wm_settings_changed", onChanged);
     };
   }, []);
 
@@ -100,7 +106,7 @@ export default function RecordsPage() {
       </div>
 
       <div className="px-4 mt-4 space-y-4">
-        <WeightChart records={allRecords} goalWeight={goalWeight} />
+        <WeightChart records={allRecords} goalWeight={goalWeight} showCaloriesOption={showMealExercise} />
 
         {/* 過去の体重を追加 */}
         <div className="bg-white rounded-2xl shadow-lg p-4">
