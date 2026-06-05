@@ -414,12 +414,12 @@ export default function SettingsPage() {
                 localStorage.setItem("wm_show_meal_exercise", String(next));
                 window.dispatchEvent(new Event("wm_settings_changed"));
               }}
-              className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${
+              className={`relative flex-shrink-0 w-12 h-6 rounded-full transition-colors duration-200 ${
                 showMealExercise ? "bg-orange-500" : "bg-gray-200"
               }`}
             >
-              <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
-                showMealExercise ? "translate-x-6" : "translate-x-0.5"
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                showMealExercise ? "translate-x-6" : "translate-x-0"
               }`} />
             </button>
           </div>
