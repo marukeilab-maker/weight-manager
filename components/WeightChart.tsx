@@ -259,16 +259,16 @@ export default function WeightChart({ records, goalWeight }: Props) {
               <ReferenceLine yAxisId="calorie" y={0} stroke="#94a3b8" strokeDasharray="2 2" strokeWidth={1} />
             )}
 
-            {/* 体重ライン（実測・控えめ） */}
+            {/* 体重ライン（実測・脇役） */}
             <Line
               yAxisId="weight"
               type="monotone"
               dataKey="weight"
               name="体重"
-              stroke="#fbbf24"
-              strokeWidth={1.2}
-              dot={{ fill: "#fbbf24", r: 2.5 }}
-              activeDot={{ r: 4 }}
+              stroke="#60a5fa"
+              strokeWidth={1.5}
+              dot={{ fill: "#60a5fa", r: 3 }}
+              activeDot={{ r: 5 }}
               connectNulls
             />
             {/* トレンドライン（7日移動平均・主役） */}
@@ -285,8 +285,8 @@ export default function WeightChart({ records, goalWeight }: Props) {
             />
             <defs>
               <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#2563eb" />
-                <stop offset="100%" stopColor="#06b6d4" />
+                <stop offset="0%" stopColor="#ea580c" />
+                <stop offset="100%" stopColor="#fb923c" />
               </linearGradient>
             </defs>
           </ComposedChart>
@@ -298,11 +298,11 @@ export default function WeightChart({ records, goalWeight }: Props) {
         <div className="mt-2 space-y-1">
           <div className="flex justify-center gap-3 text-[10px] text-gray-500 flex-wrap">
             <span className="flex items-center gap-1">
-              <span className="w-3 rounded-full bg-amber-400 inline-block" style={{ height: 2 }} />
+              <span className="w-3 rounded-full bg-blue-400 inline-block" style={{ height: 2 }} />
               実測
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-3 rounded-full bg-gradient-to-r from-blue-600 to-cyan-400 inline-block" style={{ height: 3 }} />
+              <span className="w-3 rounded-full bg-gradient-to-r from-orange-600 to-orange-400 inline-block" style={{ height: 3 }} />
               トレンド（7日平均）
             </span>
             {showCalories && (
