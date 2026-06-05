@@ -265,10 +265,10 @@ export default function WeightChart({ records, goalWeight }: Props) {
               type="monotone"
               dataKey="weight"
               name="体重"
-              stroke="#60a5fa"
-              strokeWidth={1.5}
-              dot={{ fill: "#60a5fa", r: 3 }}
-              activeDot={{ r: 5 }}
+              stroke="#9ca3af"
+              strokeWidth={1.2}
+              dot={{ fill: "#9ca3af", r: 2.5, strokeWidth: 0 }}
+              activeDot={{ r: 4 }}
               connectNulls
             />
             {/* トレンドライン（7日移動平均・主役） */}
@@ -298,7 +298,7 @@ export default function WeightChart({ records, goalWeight }: Props) {
         <div className="mt-2 space-y-1">
           <div className="flex justify-center gap-3 text-[10px] text-gray-500 flex-wrap">
             <span className="flex items-center gap-1">
-              <span className="w-3 rounded-full bg-blue-400 inline-block" style={{ height: 2 }} />
+              <span className="w-3 rounded-full bg-gray-400 inline-block" style={{ height: 2 }} />
               実測
             </span>
             <span className="flex items-center gap-1">
