@@ -285,8 +285,8 @@ export default function WeightChart({ records, goalWeight }: Props) {
             />
             <defs>
               <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#7c3aed" />
-                <stop offset="100%" stopColor="#ec4899" />
+                <stop offset="0%" stopColor="#f97316" />
+                <stop offset="100%" stopColor="#fbbf24" />
               </linearGradient>
             </defs>
           </ComposedChart>
@@ -302,7 +302,7 @@ export default function WeightChart({ records, goalWeight }: Props) {
               実測
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-3 rounded-full bg-gradient-to-r from-violet-600 to-pink-500 inline-block" style={{ height: 3 }} />
+              <span className="w-3 rounded-full bg-gradient-to-r from-orange-500 to-amber-400 inline-block" style={{ height: 3 }} />
               トレンド（7日平均）
             </span>
             {showCalories && (
