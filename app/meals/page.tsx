@@ -412,14 +412,25 @@ export default function MealsPage() {
         {/* ── 食品検索 ── */}
         <div className="bg-white rounded-2xl shadow-lg p-4">
           <p className="text-xs font-bold text-gray-500 mb-1">🔍 食品を検索して追加</p>
-          <p className="text-[10px] text-gray-400 mb-3">和食・洋食・お菓子・惣菜・ファストフード・コンビニ・飲み物など550種以上</p>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            placeholder="例：カレーライス、バナナ、コーラ…"
-            className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-orange-400 transition-colors mb-2"
-          />
+          <p className="text-[10px] text-gray-400 mb-3">和食・洋食・お菓子・スーパー惣菜・ファストフード・コンビニ・飲み物など700種以上</p>
+          <div className="relative mb-2">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="例：カレーライス、バナナ、コーラ…"
+              className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-orange-400 transition-colors pr-9"
+            />
+            {searchQuery.length > 0 && (
+              <button
+                onClick={() => { setSearchQuery(""); setSearchResults([]); }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg leading-none"
+                aria-label="クリア"
+              >
+                ✕
+              </button>
+            )}
+          </div>
           {searchResults.length > 0 && (
             <div className="border border-gray-100 rounded-xl overflow-hidden">
               {searchResults.map((item, i) => (
