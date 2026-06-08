@@ -4,6 +4,7 @@ interface Props {
   progress: number;
   bmi?: number | null;       // 現在のBMI（痩せ型保護用）
   startBmi?: number | null;  // 開始時のBMI（スタート段階の決定用）
+  goalBmi?: number | null;   // 目標体重のBMI（不健康な目標での祝福抑制用）
 }
 
 // BMI（体型）に応じた猫の段階：肥満ほど cat-0（太）、痩せるほど cat-4（細）
@@ -15,14 +16,16 @@ function stageByBmi(bmi: number): number {
   return 4; // 痩せ型
 }
 
-export default function WeightCat({ progress, bmi, startBmi }: Props) {
+export default function WeightCat({ progress, bmi, startBmi, goalBmi }: Props) {
   const p = Math.min(100, Math.max(0, progress));
 
   // 開始時の体型に応じたスタート段階
   const startStage = startBmi != null && startBmi > 0 ? stageByBmi(startBmi) : 0;
 
   const isUnderweight = bmi != null && bmi > 0 && bmi < 18.5;
-  const isWin = p >= 100 && !isUnderweight; // 目標達成（痩せ型のときは無理を促さないため祝福しない）
+  // 目標体重自体が健康範囲外（BMI 18.5未満）の場合も祝福しない
+  const isUnhealthyGoal = goalBmi != null && goalBmi > 0 && goalBmi < 18.5;
+  const isWin = p >= 100 && !isUnderweight && !isUnhealthyGoal;
 
   // cat-4 は「達成時」だけの特別な画像（手を上げてキラキラ）。
   // 道中は cat-0〜cat-3 のみを使い、達成率に応じて cat-3 へ近づく。
@@ -39,7 +42,7 @@ export default function WeightCat({ progress, bmi, startBmi }: Props) {
   // メッセージ
   let message: string;
   let highlight = false;
-  if (isUnderweight) {
+  if (isUnderweight || (p >= 100 && isUnhealthyGoal)) {
     message = "もう十分スリム！無理は禁物だよ🐱";
     highlight = true;
   } else if (isWin) {

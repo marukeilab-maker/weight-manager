@@ -267,7 +267,7 @@ export default function HomePage() {
           </p>
 
           <div className="flex justify-center mb-2">
-            <WeightCat progress={progress} bmi={displayBmi} startBmi={startBmi} />
+            <WeightCat progress={progress} bmi={displayBmi} startBmi={startBmi} goalBmi={profile.height > 0 ? calcBMI(profile.goalWeight, profile.height) : null} />
           </div>
 
           {/* こたろうからの日替わりメッセージ（記録した日に表示） */}
