@@ -97,7 +97,7 @@ export default function WeightCat({ progress, bmi, startBmi, goalBmi }: Props) {
           ))}
 
         <img
-          src={`/cats/cat-${stage}.png`}
+          src={isUnderweight ? "/cats/cat-skinny.png" : `/cats/cat-${stage}.png`}
           alt="こたろう"
           draggable={false}
           className={`select-none ${showSparkle ? "win-bounce" : ""}`}
