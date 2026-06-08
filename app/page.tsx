@@ -12,7 +12,10 @@ import {
   saveWeightRecord,
   getMealRecord,
   getExerciseRecord,
+  getAllMeals,
+  getAllExercises,
 } from "@/lib/storage";
+import { getWeeklyReport, WeeklyReport } from "@/lib/weeklyReport";
 import {
   calcBMI,
   calcProgress,
@@ -35,6 +38,8 @@ export default function HomePage() {
   const [mounted, setMounted] = useState(false);
   const [now, setNow] = useState(new Date());
   const [showMealExercise, setShowMealExercise] = useState(true);
+  const [weeklyReport, setWeeklyReport] = useState<WeeklyReport | null>(null);
+  const [reportDismissed, setReportDismissed] = useState(false);
 
   const loadData = useCallback(() => {
     const p = getProfile();
@@ -48,6 +53,19 @@ export default function HomePage() {
     } else if (recs.length > 0) {
       setWeightInput(String(recs[recs.length - 1].weight));
     }
+    // 週次レポート生成
+    const report = getWeeklyReport(recs, getAllMeals(), getAllExercises());
+    setWeeklyReport(report);
+    // 今週月曜日に既に閉じたかチェック
+    const thisMonday = (() => {
+      const now = new Date();
+      const dow = now.getDay();
+      const d = new Date(now);
+      d.setDate(now.getDate() - ((dow + 6) % 7));
+      return d.toISOString().slice(0, 10);
+    })();
+    const dismissedKey = `wm_report_dismissed_${thisMonday}`;
+    setReportDismissed(localStorage.getItem(dismissedKey) === "1");
   }, []);
 
   useEffect(() => {
@@ -172,6 +190,64 @@ export default function HomePage() {
       </div>
 
       <div className="px-4 mt-4 space-y-4">
+        {/* 週次レポート（先週データがあり、まだ閉じていない場合に表示） */}
+        {weeklyReport && !reportDismissed && (
+          <div className="bg-white rounded-2xl shadow-lg p-4 border border-teal-100">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-black text-teal-600">
+                📊 先週のレポート（{weeklyReport.weekStart.slice(5).replace("-", "/")}〜{weeklyReport.weekEnd.slice(5).replace("-", "/")}）
+              </p>
+              <button
+                onClick={() => {
+                  const now = new Date();
+                  const dow = now.getDay();
+                  const d = new Date(now);
+                  d.setDate(now.getDate() - ((dow + 6) % 7));
+                  const thisMonday = d.toISOString().slice(0, 10);
+                  localStorage.setItem(`wm_report_dismissed_${thisMonday}`, "1");
+                  setReportDismissed(true);
+                }}
+                className="text-gray-300 hover:text-gray-400 text-lg leading-none"
+                aria-label="閉じる"
+              >✕</button>
+            </div>
+
+            {/* データサマリー */}
+            <div className="flex gap-2 mb-3">
+              <div className="flex-1 bg-gray-50 rounded-xl py-2 text-center">
+                <p className="text-[10px] text-gray-400 mb-0.5">記録日数</p>
+                <p className="text-lg font-black text-gray-700">{weeklyReport.recordDays}<span className="text-xs font-normal text-gray-400"> / 7日</span></p>
+              </div>
+              <div className="flex-1 bg-gray-50 rounded-xl py-2 text-center">
+                <p className="text-[10px] text-gray-400 mb-0.5">体重変化</p>
+                <p className={`text-lg font-black ${
+                  weeklyReport.weightDiff === null ? "text-gray-400"
+                  : weeklyReport.weightDiff < 0 ? "text-teal-600"
+                  : weeklyReport.weightDiff > 0 ? "text-red-400"
+                  : "text-gray-500"
+                }`}>
+                  {weeklyReport.weightDiff === null ? "−"
+                    : weeklyReport.weightDiff > 0 ? `+${weeklyReport.weightDiff}` : weeklyReport.weightDiff}
+                  {weeklyReport.weightDiff !== null && <span className="text-xs font-normal text-gray-400">kg</span>}
+                </p>
+              </div>
+              {weeklyReport.avgCalories > 0 && (
+                <div className="flex-1 bg-gray-50 rounded-xl py-2 text-center">
+                  <p className="text-[10px] text-gray-400 mb-0.5">平均摂取</p>
+                  <p className="text-lg font-black text-orange-500">{weeklyReport.avgCalories}<span className="text-xs font-normal text-gray-400">kcal</span></p>
+                </div>
+              )}
+            </div>
+
+            {/* こたろうのメッセージ */}
+            <div className="bg-orange-50 rounded-xl px-4 py-3 relative">
+              <p className="text-xs font-bold text-gray-700 leading-relaxed whitespace-pre-line">
+                🐱 {weeklyReport.message}
+              </p>
+            </div>
+          </div>
+        )}
+
         {isUnhealthyGoal && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-3 text-sm text-yellow-700">
             ⚠️ 設定されたペースは健康的な減量目安（体重の0.5〜1%/週）を超えています。無理のない計画をおすすめします。

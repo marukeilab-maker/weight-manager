@@ -81,3 +81,7 @@ export function saveExerciseRecord(record: ExerciseRecord): void {
 export function getAllMeals(): MealRecord[] {
   return load<MealRecord[]>(KEYS.meals) ?? [];
 }
+
+export function getAllExercises(): ExerciseRecord[] {
+  return load<ExerciseRecord[]>(KEYS.exercises) ?? [];
+}
