@@ -287,56 +287,72 @@ export default function SettingsPage() {
 
         {/* 健康被害警告（BMI 18.5未満） */}
         {h > 0 && gw > 0 && gw < minHealthyWeight && (
-          <div className="rounded-2xl p-4 border-2 border-red-400 bg-red-50">
-            <div className="flex items-start gap-2">
-              <AlertTriangle size={20} className="shrink-0 mt-0.5 text-red-600" />
-              <div className="text-xs leading-relaxed">
-                <p className="font-black text-red-700 text-sm mb-1.5">🚨 健康被害のリスクがあります</p>
-                <p className="text-red-700 font-bold mb-1">
-                  目標体重 {gw}kg は BMI 18.5 を下回っており、医学的に「低体重（痩せ）」の範囲です。
-                </p>
-                <p className="text-gray-700 mb-1.5">
-                  この体重域では以下のリスクが高まります：
-                </p>
-                <ul className="text-gray-700 space-y-0.5 mb-2 pl-3 list-disc">
-                  <li>貧血・免疫力の低下</li>
-                  <li>骨密度の低下・骨粗しょう症</li>
-                  <li>生理不順・ホルモンバランスの乱れ</li>
-                  <li>筋肉量の著しい低下</li>
-                  <li>摂食障害のリスク</li>
-                </ul>
-                <p className="text-red-600 font-bold">
-                  💡 健康を守る最低ラインは {minHealthyWeight}kg（BMI 18.5）です。目標体重の見直しを強くおすすめします。
-                </p>
-                <p className="text-gray-500 mt-1.5 text-[10px]">
-                  ※ 気になる症状がある場合は医師にご相談ください。
+          <div className="rounded-2xl border-2 border-red-400 bg-red-50 overflow-hidden">
+            {/* こたろうの吹き出し */}
+            <div className="flex items-end gap-3 px-4 pt-4 pb-3 border-b border-red-200">
+              <div className="text-4xl shrink-0">😿</div>
+              <div className="relative bg-white border-2 border-red-300 rounded-2xl rounded-bl-none px-3 py-2 flex-1">
+                <p className="text-xs font-black text-red-600 leading-relaxed">
+                  ちょっと待って！{gw}kg はやせすぎにゃ…😿<br />
+                  こたろう、心配で眠れないにゃ。<br />
+                  お願いだから、目標を見直してほしいにゃ🙏
                 </p>
               </div>
+            </div>
+            {/* 詳細情報 */}
+            <div className="px-4 py-3 text-xs leading-relaxed">
+              <p className="font-black text-red-700 mb-1">🚨 健康被害のリスクがあります</p>
+              <p className="text-red-700 font-bold mb-1">
+                目標体重 {gw}kg は BMI 18.5 を下回っており、医学的に「低体重（痩せ）」の範囲です。
+              </p>
+              <p className="text-gray-700 mb-1.5">この体重域では以下のリスクが高まります：</p>
+              <ul className="text-gray-700 space-y-0.5 mb-2 pl-3 list-disc">
+                <li>貧血・免疫力の低下</li>
+                <li>骨密度の低下・骨粗しょう症</li>
+                <li>生理不順・ホルモンバランスの乱れ</li>
+                <li>筋肉量の著しい低下</li>
+                <li>摂食障害のリスク</li>
+              </ul>
+              <p className="text-red-600 font-bold">
+                💡 健康を守る最低ラインは {minHealthyWeight}kg（BMI 18.5）です。目標体重の見直しを強くおすすめします。
+              </p>
+              <p className="text-gray-400 mt-1.5 text-[10px]">
+                ※ 気になる症状がある場合は医師にご相談ください。
+              </p>
             </div>
           </div>
         )}
 
         {/* 美容体重警告（BMI 18.5以上 20未満） */}
         {h > 0 && gw > 0 && gw >= minHealthyWeight && gw < beautyWeight && (
-          <div className="rounded-2xl p-4 border border-pink-200 bg-pink-50">
-            <div className="flex items-start gap-2">
-              <AlertTriangle size={18} className="shrink-0 mt-0.5 text-pink-500" />
-              <div className="text-xs leading-relaxed">
-                <p className="font-black text-pink-600 mb-1">💄 美容体重を下回っています</p>
-                <p className="text-gray-600 mb-1.5">
-                  目標体重 {gw}kg は「美容体重」({beautyWeight}kg / BMI 20) を下回っています。
-                  健康範囲内ではありますが、見た目の印象への影響が出やすくなります。
-                </p>
-                <ul className="text-gray-600 space-y-0.5 mb-2 pl-3 list-disc">
-                  <li>頬・顔のこけ、老け見えが出やすくなる</li>
-                  <li>髪のツヤ・肌のハリが失われやすい</li>
-                  <li>筋肉量の減少で体のラインが崩れることも</li>
-                </ul>
-                <p className="text-pink-600 font-bold">
-                  💡 美しく痩せるためには、筋トレと高タンパク食を組み合わせて筋肉を保つことが大切です。
-                  美容体重 {beautyWeight}kg を目安に、無理のない範囲で進めましょう。
+          <div className="rounded-2xl border border-pink-200 bg-pink-50 overflow-hidden">
+            {/* こたろうの吹き出し */}
+            <div className="flex items-end gap-3 px-4 pt-4 pb-3 border-b border-pink-100">
+              <div className="text-4xl shrink-0">🐱</div>
+              <div className="relative bg-white border border-pink-200 rounded-2xl rounded-bl-none px-3 py-2 flex-1">
+                <p className="text-xs font-black text-pink-600 leading-relaxed">
+                  うーん、{gw}kg は美容的にちょっと気になるにゃ💄<br />
+                  健康な範囲だけど、筋肉も一緒に落ちちゃうかも。<br />
+                  {beautyWeight}kg あたりを目指した方がキレイにゃ✨
                 </p>
               </div>
+            </div>
+            {/* 詳細情報 */}
+            <div className="px-4 py-3 text-xs leading-relaxed">
+              <p className="font-black text-pink-600 mb-1">💄 美容体重を下回っています</p>
+              <p className="text-gray-600 mb-1.5">
+                目標体重 {gw}kg は「美容体重」({beautyWeight}kg / BMI 20) を下回っています。
+                健康範囲内ではありますが、見た目の印象への影響が出やすくなります。
+              </p>
+              <ul className="text-gray-600 space-y-0.5 mb-2 pl-3 list-disc">
+                <li>頬・顔のこけ、老け見えが出やすくなる</li>
+                <li>髪のツヤ・肌のハリが失われやすい</li>
+                <li>筋肉量の減少で体のラインが崩れることも</li>
+              </ul>
+              <p className="text-pink-600 font-bold">
+                💡 美しく痩せるためには、筋トレと高タンパク食を組み合わせて筋肉を保つことが大切です。
+                美容体重 {beautyWeight}kg を目安に、無理のない範囲で進めましょう。
+              </p>
             </div>
           </div>
         )}
