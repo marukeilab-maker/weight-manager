@@ -321,7 +321,7 @@ export default function HomePage() {
         {displayBmi !== null && displayBmi < 18.5 && (
           <div className="bg-blue-50 border-2 border-blue-300 rounded-2xl p-4">
             <div className="flex items-end gap-3 mb-3">
-              <div className="text-5xl shrink-0">😿</div>
+              <img src="/cat-sad.png" alt="こたろう" className="w-16 h-16 shrink-0 object-contain" />
               <div className="bg-white border border-blue-200 rounded-2xl rounded-bl-none px-3 py-2.5 flex-1">
                 <p className="text-xs font-black text-blue-700 leading-relaxed">
                   いまの体重、やせすぎにゃ…😿<br />

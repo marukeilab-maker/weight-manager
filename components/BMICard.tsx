@@ -77,7 +77,7 @@ export default function BMICard({ bmi, height, currentWeight, age, gender }: Pro
       {isUnderweight && (
         <div className="bg-blue-50 border-b border-blue-200 px-4 pt-4 pb-3">
           <div className="flex items-end gap-3">
-            <div className="text-4xl shrink-0">😿</div>
+            <img src="/cat-sad.png" alt="こたろう" className="w-14 h-14 shrink-0 object-contain" />
             <div className="bg-white border border-blue-200 rounded-2xl rounded-bl-none px-3 py-2 flex-1">
               <p className="text-xs font-black text-blue-700 leading-relaxed">
                 いまの体重、やせすぎにゃ…😿<br />

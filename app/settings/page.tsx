@@ -290,7 +290,7 @@ export default function SettingsPage() {
           <div className="rounded-2xl border-2 border-red-400 bg-red-50 overflow-hidden">
             {/* こたろうの吹き出し */}
             <div className="flex items-end gap-3 px-4 pt-4 pb-3 border-b border-red-200">
-              <div className="text-4xl shrink-0">😿</div>
+              <img src="/cat-sad.png" alt="こたろう" className="w-14 h-14 shrink-0 object-contain" />
               <div className="relative bg-white border-2 border-red-300 rounded-2xl rounded-bl-none px-3 py-2 flex-1">
                 <p className="text-xs font-black text-red-600 leading-relaxed">
                   ちょっと待って！{gw}kg はやせすぎにゃ…😿<br />
