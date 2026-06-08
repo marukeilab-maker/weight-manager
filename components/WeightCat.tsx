@@ -34,6 +34,8 @@ export default function WeightCat({ progress, bmi, startBmi, goalBmi }: Props) {
   let stage: number;
   if (isWin) {
     stage = 4;
+  } else if (p >= 100 && isBelowBeautyGoal && !isUnderweight) {
+    stage = 4; // cat-4をキラキラなしで使用
   } else {
     const start = Math.min(3, startStage);
     stage = Math.round(start + (3 - start) * (p / 100));
