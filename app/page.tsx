@@ -317,6 +317,30 @@ export default function HomePage() {
         </div>
 
         {/* BMI */}
+        {/* 現在体重が痩せすぎの時、こたろうの心配メッセージ */}
+        {displayBmi !== null && displayBmi < 18.5 && (
+          <div className="bg-blue-50 border-2 border-blue-300 rounded-2xl p-4">
+            <div className="flex items-end gap-3 mb-3">
+              <div className="text-5xl shrink-0">😿</div>
+              <div className="bg-white border border-blue-200 rounded-2xl rounded-bl-none px-3 py-2.5 flex-1">
+                <p className="text-xs font-black text-blue-700 leading-relaxed">
+                  いまの体重、やせすぎにゃ…😿<br />
+                  BMI {displayBmi.toFixed(1)} は健康ラインより低いよ。<br />
+                  こたろうはあなたの健康が一番大事にゃ🙏
+                </p>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl px-3 py-2.5 text-xs text-gray-600 leading-relaxed space-y-1">
+              <p className="font-black text-blue-600 mb-1">💙 体重を増やすためのヒント</p>
+              <p>🍳 <span className="font-bold">タンパク質を意識して摂る</span>（卵・鶏むね・豆腐・魚など）</p>
+              <p>🍚 <span className="font-bold">3食しっかり食べる</span>（食事を抜かない）</p>
+              <p>🏋️ <span className="font-bold">筋トレを取り入れる</span>（健康的に体重を増やせる）</p>
+              <p>😴 <span className="font-bold">睡眠を十分に取る</span>（ホルモンバランスが整う）</p>
+              <p className="text-[10px] text-gray-400 pt-1">※ 体調が気になる場合は医師にご相談ください</p>
+            </div>
+          </div>
+        )}
+
         {displayBmi !== null && <BMICard bmi={displayBmi} height={profile.height} currentWeight={currentWeight} age={age} gender={profile.gender} />}
 
         {/* Calorie summary */}

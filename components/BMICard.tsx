@@ -69,8 +69,27 @@ export default function BMICard({ bmi, height, currentWeight, age, gender }: Pro
   }
   const est = selected ? estimate(selected.target) : null;
 
+  const isUnderweight = bmi < 18.5;
+
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4">
+    <div className={`bg-white rounded-2xl shadow-lg overflow-hidden ${isUnderweight ? "border-2 border-blue-300" : ""}`}>
+      {/* 痩せすぎ時のこたろう警告バナー */}
+      {isUnderweight && (
+        <div className="bg-blue-50 border-b border-blue-200 px-4 pt-4 pb-3">
+          <div className="flex items-end gap-3">
+            <div className="text-4xl shrink-0">😿</div>
+            <div className="bg-white border border-blue-200 rounded-2xl rounded-bl-none px-3 py-2 flex-1">
+              <p className="text-xs font-black text-blue-700 leading-relaxed">
+                いまの体重、やせすぎにゃ…😿<br />
+                BMI {bmi.toFixed(1)} は健康ラインより低いよ。<br />
+                無理なダイエットは続けないでほしいにゃ🙏
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="p-4">
       {/* ヘッダー */}
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-bold text-gray-700 text-sm">BMI 指数</h3>
@@ -299,6 +318,7 @@ export default function BMICard({ bmi, height, currentWeight, age, gender }: Pro
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }
