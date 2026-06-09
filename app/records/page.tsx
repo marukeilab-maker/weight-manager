@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Trash2, TrendingDown, TrendingUp, Minus, Pencil, Check, X, Plus } from "lucide-react";
 import WeightChart from "@/components/WeightChart";
-import { getWeightRecords, saveWeightRecord } from "@/lib/storage";
+import { getWeightRecords, saveWeightRecord, deleteWeightRecord } from "@/lib/storage";
 import { WeightRecord } from "@/lib/types";
 import { getProfile } from "@/lib/storage";
 import { calcBMI, today } from "@/lib/calculations";
@@ -15,6 +15,7 @@ export default function RecordsPage() {
   const [editValue, setEditValue] = useState("");
   const [editDateValue, setEditDateValue] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
+  const [confirmDeleteDate, setConfirmDeleteDate] = useState<string | null>(null);
   const [addDate, setAddDate] = useState(today());
   const [addWeight, setAddWeight] = useState("");
   const [showMealExercise, setShowMealExercise] = useState(true);
@@ -42,10 +43,9 @@ export default function RecordsPage() {
   }, []);
 
   function handleDelete(date: string) {
-    const updated = records.filter((r) => r.date !== date);
-    const sorted = [...updated].reverse();
-    localStorage.setItem("wm_records", JSON.stringify(sorted));
-    setRecords(updated);
+    deleteWeightRecord(date);
+    setRecords(getWeightRecords().slice().reverse());
+    setConfirmDeleteDate(null);
   }
 
   function startEdit(r: WeightRecord) {
@@ -59,16 +59,13 @@ export default function RecordsPage() {
     if (isNaN(w) || w <= 0 || !editDateValue) return;
     const bmi = calcBMI(w, height);
 
-    // 元の日付の記録を削除し、新しい日付で保存（日付が変わっていない場合は単に上書き）
-    let updated = records.filter((r) => r.date !== oldDate);
-    // 同じ日付に既に別の記録があれば上書き
-    updated = updated.filter((r) => r.date !== editDateValue);
-    updated.push({ date: editDateValue, weight: w, bmi });
-    updated.sort((a, b) => b.date.localeCompare(a.date));
-
-    const sorted = [...updated].reverse();
-    localStorage.setItem("wm_records", JSON.stringify(sorted));
-    setRecords(updated);
+    // 元の日付が変わっている場合は古い記録を削除
+    if (oldDate !== editDateValue) {
+      deleteWeightRecord(oldDate);
+    }
+    // 新しい日付で保存（同日の既存記録は上書き）
+    saveWeightRecord({ date: editDateValue, weight: w, bmi });
+    setRecords(getWeightRecords().slice().reverse());
     setEditingDate(null);
     setEditValue("");
     setEditDateValue("");
@@ -184,7 +181,9 @@ export default function RecordsPage() {
                         className="max-w-full box-border appearance-none text-sm font-bold text-gray-700 border border-gray-200 rounded px-1.5 py-0.5 outline-none focus:border-teal-500"
                       />
                     ) : (
-                      <div className="text-sm font-bold text-gray-700">{r.date}</div>
+                      <div className="text-sm font-bold text-gray-700">
+                      {new Date(r.date + "T00:00:00").toLocaleDateString("ja-JP", { month: "long", day: "numeric", weekday: "short" })}
+                    </div>
                     )}
                     {isEditing ? (
                       <div className="flex items-center gap-2 mt-1">
@@ -238,12 +237,29 @@ export default function RecordsPage() {
                       >
                         <Pencil size={15} />
                       </button>
-                      <button
-                        onClick={() => handleDelete(r.date)}
-                        className="p-2 text-gray-300 hover:text-red-400 transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {confirmDeleteDate === r.date ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleDelete(r.date)}
+                            className="text-[10px] font-black text-red-500 bg-red-50 px-2 py-1 rounded-lg active:scale-95 transition-all"
+                          >
+                            削除
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteDate(null)}
+                            className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-lg active:scale-95 transition-all"
+                          >
+                            取消
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteDate(r.date)}
+                          className="p-2 text-gray-300 hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

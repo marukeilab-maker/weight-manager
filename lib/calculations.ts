@@ -54,7 +54,8 @@ export const MET_VALUES: Record<string, number> = {
 };
 
 export function calcBurnedCalories(met: number, weightKg: number, minutes: number): number {
-  return Math.round(met * weightKg * (minutes / 60));
+  // MET × 体重(kg) × 時間(h) × 1.05（O2 1Lあたり5kcal換算）
+  return Math.round(met * weightKg * (minutes / 60) * 1.05);
 }
 
 export function calcAge(birthdate: string): number {

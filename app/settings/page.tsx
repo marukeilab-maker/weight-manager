@@ -1,9 +1,9 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Scale, Target, Calendar, Flame, CheckCircle, Download, Upload, Cake, User, AlertTriangle, Calculator, Trash2, HelpCircle, Shield } from "lucide-react";
-import { getProfile, saveProfile, getWeightRecords } from "@/lib/storage";
-import { today, calcBMR, calcAge, daysBetween, addDays } from "@/lib/calculations";
+import { Scale, Target, Calendar, Flame, CheckCircle, Download, Upload, Cake, User, AlertTriangle, Calculator, Trash2, HelpCircle, Shield, Weight } from "lucide-react";
+import { getProfile, saveProfile, getWeightRecords, saveWeightRecord } from "@/lib/storage";
+import { today, calcBMR, calcAge, daysBetween, addDays, calcBMI } from "@/lib/calculations";
 import { APP_VERSION } from "@/lib/version";
 import BirthdateSelect from "@/components/BirthdateSelect";
 
@@ -27,6 +27,8 @@ export default function SettingsPage() {
   const [lastBackup, setLastBackup] = useState<string | null>(null);
   const [activityLevel, setActivityLevel] = useState("low");
   const [currentWeight, setCurrentWeight] = useState<number | null>(null);
+  const [currentWeightInput, setCurrentWeightInput] = useState("");
+  const [todayRecorded, setTodayRecorded] = useState(false);
   const [autoApplied, setAutoApplied] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [showMealExercise, setShowMealExercise] = useState(true);
@@ -120,6 +122,8 @@ export default function SettingsPage() {
     // 最新体重を取得
     const recs = getWeightRecords();
     if (recs.length) setCurrentWeight(recs[recs.length - 1].weight);
+    // 今日すでに記録済みか確認
+    setTodayRecorded(recs.some((r) => r.date === today()));
   }, []);
 
   // TDEE計算（基礎代謝 × 活動係数）
@@ -138,11 +142,12 @@ export default function SettingsPage() {
     setTargetCalories(String(recommendedTarget));
     localStorage.setItem("wm_activity_level", activityLevel);
     // 「保存する」を押し忘れても反映されるよう即保存
+    const existingNotificationTime = getProfile()?.notificationTime ?? "08:00";
     saveProfile({
       height: Number(height),
       goalWeight: Number(goalWeight),
-      goalDate,
-      notificationTime: "08:00",
+      goalDate: goalDate || (() => { const d = new Date(); d.setMonth(d.getMonth() + 1); return d.toISOString().split("T")[0]; })(),
+      notificationTime: existingNotificationTime,
       targetCalories: recommendedTarget,
       birthdate: birthdate || undefined,
       gender,
@@ -186,11 +191,16 @@ export default function SettingsPage() {
   const needsBackup = daysSinceBackup === null || daysSinceBackup >= 30;
 
   function handleSave() {
+    const parsedGoalDate = goalDate || (() => {
+      const d = new Date(); d.setMonth(d.getMonth() + 1);
+      return d.toISOString().split("T")[0];
+    })();
+    const existingNotificationTime = getProfile()?.notificationTime ?? "08:00";
     saveProfile({
       height: Number(height),
       goalWeight: Number(goalWeight),
-      goalDate,
-      notificationTime: "08:00",
+      goalDate: parsedGoalDate,
+      notificationTime: existingNotificationTime,
       targetCalories: Number(targetCalories),
       birthdate: birthdate || undefined,
       gender,
@@ -237,6 +247,61 @@ export default function SettingsPage() {
             <Cake size={14} className="text-teal-600" /> 誕生日
           </label>
           <BirthdateSelect key={birthdate || "empty"} value={birthdate} onChange={setBirthdate} />
+        </div>
+
+        {/* スタート体重 */}
+        <div className="bg-white rounded-2xl shadow-lg p-4">
+          <label className="flex items-center gap-2 text-sm font-bold text-gray-600 mb-1">
+            <Weight size={14} className="text-teal-600" /> スタート体重 (kg)
+          </label>
+          <p className="text-[11px] text-gray-400 mb-2">
+            基礎代謝・カロリー計算の基準になります。
+            {!todayRecorded && <span className="text-teal-600 font-bold"> 初回設定時に入力してください。</span>}
+          </p>
+
+          {todayRecorded ? (
+            /* 今日記録済み → ホームへ誘導 */
+            <div className="bg-teal-50 border border-teal-200 rounded-xl px-4 py-3 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-black text-teal-700">今日の体重は記録済みです ✅</p>
+                <p className="text-[11px] text-teal-500 mt-0.5">現在の記録：{currentWeight}kg</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">毎日の体重はホーム画面から記録してください</p>
+              </div>
+            </div>
+          ) : (
+            /* 未記録 → 入力フォーム表示 */
+            <>
+              {currentWeight && (
+                <p className="text-xs text-teal-600 font-bold mb-2">直近の記録：{currentWeight}kg</p>
+              )}
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  step="0.1"
+                  value={currentWeightInput}
+                  onChange={(e) => setCurrentWeightInput(e.target.value)}
+                  placeholder={currentWeight ? String(currentWeight) : "例: 60.0"}
+                  className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-3 text-xl font-black text-center focus:border-teal-500 outline-none"
+                />
+                <button
+                  onClick={() => {
+                    const w = parseFloat(currentWeightInput);
+                    if (isNaN(w) || w <= 0) return;
+                    const h = Number(height);
+                    const bmi = h > 0 ? calcBMI(w, h) : 0;
+                    saveWeightRecord({ date: today(), weight: w, bmi });
+                    setCurrentWeight(w);
+                    setCurrentWeightInput("");
+                    setTodayRecorded(true);
+                  }}
+                  disabled={!currentWeightInput}
+                  className="px-5 py-3 bg-gradient-to-r from-teal-500 to-teal-700 text-white font-black rounded-xl disabled:opacity-40 active:scale-95 transition-all text-sm"
+                >
+                  記録
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* 身長 */}

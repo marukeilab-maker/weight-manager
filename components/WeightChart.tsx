@@ -273,7 +273,19 @@ export default function WeightChart({ records, goalWeight, showCaloriesOption = 
               name="体重"
               stroke="#9ca3af"
               strokeWidth={1.2}
-              dot={{ fill: "#9ca3af", r: 2.5, strokeWidth: 0 }}
+              dot={(props: { cx?: number; cy?: number; index?: number; payload?: { date: string } }) => {
+                const { cx, cy, index, payload } = props;
+                if (cx == null || cy == null) return <g key={index} />;
+                // 最後のデータ点（今日）を強調
+                const isToday = index === data.length - 1;
+                return isToday ? (
+                  <g key={index}>
+                    <circle cx={cx} cy={cy} r={6} fill="#0d9488" stroke="white" strokeWidth={2} />
+                  </g>
+                ) : (
+                  <circle key={index} cx={cx} cy={cy} r={2.5} fill="#9ca3af" />
+                );
+              }}
               activeDot={{ r: 4 }}
               connectNulls
             />

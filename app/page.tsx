@@ -10,8 +10,6 @@ import {
   getProfile,
   getWeightRecords,
   saveWeightRecord,
-  getMealRecord,
-  getExerciseRecord,
   getAllMeals,
   getAllExercises,
 } from "@/lib/storage";
@@ -24,7 +22,6 @@ import {
   today,
   formatDate,
   calcAge,
-  calcBMR,
 } from "@/lib/calculations";
 import { getDailyCatMessage } from "@/lib/catMessages";
 import { Profile, WeightRecord } from "@/lib/types";
@@ -37,7 +34,6 @@ export default function HomePage() {
   const [saved, setSaved] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [now, setNow] = useState(new Date());
-  const [showMealExercise, setShowMealExercise] = useState(true);
   const [weeklyReport, setWeeklyReport] = useState<WeeklyReport | null>(null);
   const [reportDismissed, setReportDismissed] = useState(false);
 
@@ -50,8 +46,11 @@ export default function HomePage() {
     setTodayRecord(tr);
     if (tr) {
       setWeightInput(String(tr.weight));
-    } else if (recs.length > 0) {
-      setWeightInput(String(recs[recs.length - 1].weight));
+    } else {
+      // 今日未記録なら前回の体重を初期値にセット
+      const sorted = [...recs].sort((a, b) => a.date.localeCompare(b.date));
+      const prev = sorted[sorted.length - 1];
+      setWeightInput(prev ? String(prev.weight) : "");
     }
     // 週次レポート生成
     const report = getWeeklyReport(recs, getAllMeals(), getAllExercises());
@@ -71,14 +70,7 @@ export default function HomePage() {
   useEffect(() => {
     setMounted(true);
     loadData();
-    const v = localStorage.getItem("wm_show_meal_exercise");
-    setShowMealExercise(v !== "false");
-    const onChanged = () => {
-      const v2 = localStorage.getItem("wm_show_meal_exercise");
-      setShowMealExercise(v2 !== "false");
-    };
-    window.addEventListener("wm_settings_changed", onChanged);
-    return () => window.removeEventListener("wm_settings_changed", onChanged);
+    return () => {};
   }, [loadData]);
 
   // 日付・データの自動更新（1分ごと＋画面復帰時＋フォーカス時）
@@ -128,17 +120,24 @@ export default function HomePage() {
   const displayBmi = latestRecord ? calcBMI(latestRecord.weight, profile.height) : null;
   // 開始時BMI（こたろうのスタート段階用）
   const startBmi = startWeight > 0 ? calcBMI(startWeight, profile.height) : null;
-
-  const meal = getMealRecord(today());
-  const totalCalories = meal.breakfast + meal.lunch + meal.dinner + meal.snack;
-  const exercise = getExerciseRecord(today());
-  const burnedCalories = exercise.entries.reduce((s, e) => s + e.calories, 0);
-
   const age = profile.birthdate ? calcAge(profile.birthdate) : null;
-  const bmr = age && profile.gender && currentWeight
-    ? calcBMR(currentWeight, profile.height, age, profile.gender)
-    : null;
-  const totalBurned = burnedCalories + (bmr ?? 0);
+
+  // 連続記録日数（ストリーク）
+  const streak = (() => {
+    if (records.length === 0) return 0;
+    const dateSet = new Set(records.map((r) => r.date));
+    let count = 0;
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    // 今日の記録がなければ昨日から数える
+    if (!todayRecord) d.setDate(d.getDate() - 1);
+    while (true) {
+      const ds = d.toISOString().slice(0, 10);
+      if (dateSet.has(ds)) { count++; d.setDate(d.getDate() - 1); }
+      else break;
+    }
+    return count;
+  })();
 
   const isUnhealthyGoal =
     startWeight > 0 &&
@@ -150,18 +149,28 @@ export default function HomePage() {
     <div className="pb-20 bg-gray-50 min-h-screen">
       {/* Header gradient */}
       <div className="bg-gradient-to-br from-teal-500 to-teal-700 pt-5 pb-6 px-4 rounded-b-3xl shadow-lg">
-        <div className="mb-2">
-          <div className="text-white/60 text-sm font-medium">
-            {now.toLocaleDateString("ja-JP", { year: "numeric" })}
+        <div className="flex items-start justify-between mb-2">
+          <div>
+            <div className="text-white/60 text-sm font-medium">
+              {now.toLocaleDateString("ja-JP", { year: "numeric" })}
+            </div>
+            <div className="text-2xl font-black" style={{ color: "#ffd8b0" }}>
+              {now.toLocaleDateString("ja-JP", { month: "long", day: "numeric", weekday: "short" })}
+            </div>
           </div>
-          <div className="text-2xl font-black" style={{ color: "#ffd8b0" }}>
-            {now.toLocaleDateString("ja-JP", { month: "long", day: "numeric", weekday: "short" })}
-          </div>
+          {streak >= 2 && (
+            <div className="bg-white/20 rounded-xl px-3 py-1.5 text-center">
+              <div className="text-lg leading-none">🔥</div>
+              <div className="text-white font-black text-sm leading-none">{streak}</div>
+              <div className="text-white/70 text-[9px] mt-0.5">日連続</div>
+            </div>
+          )}
         </div>
         <h1 className="text-white text-lg font-black mb-4">今日の体重を記録</h1>
 
         <div className="bg-white/20 backdrop-blur rounded-2xl p-5">
-          {diff !== null && (
+          {/* 記録済みの場合のみ右上に差分表示（未記録時はB表示を使う） */}
+          {diff !== null && todayRecord && (
             <div className={`flex items-center justify-end gap-1 mb-1 text-sm font-bold ${
               diff > 0 ? "text-red-200" : diff < 0 ? "text-blue-200" : "text-white/70"
             }`}>
@@ -170,6 +179,42 @@ export default function HomePage() {
             </div>
           )}
           <WeightPicker value={weightInput} onChange={setWeightInput} />
+
+          {/* B: 前回との差分を目立たせる */}
+          {(() => {
+            const inputW = parseFloat(weightInput);
+            if (!prevWeight || isNaN(inputW) || inputW <= 0) return null;
+            const d = inputW - prevWeight;
+            if (d === 0) return (
+              <p className="text-center text-white/70 text-xs mb-2">前回と同じ {prevWeight}kg</p>
+            );
+            return (
+              <div className={`flex items-center justify-center gap-1.5 mb-2 text-sm font-black ${
+                d > 0 ? "text-red-200" : "text-blue-200"
+              }`}>
+                {d > 0 ? <TrendingUp size={15} /> : <TrendingDown size={15} />}
+                <span>前回より {d > 0 ? "+" : ""}{d.toFixed(1)}kg</span>
+                <span className="text-white/50 font-normal text-xs">（前回 {prevWeight}kg）</span>
+              </div>
+            );
+          })()}
+
+          {/* A: 異常値アラート（前回より±3kg以上） */}
+          {(() => {
+            const inputW = parseFloat(weightInput);
+            if (!prevWeight || isNaN(inputW) || inputW <= 0) return null;
+            const diff = Math.abs(inputW - prevWeight);
+            if (diff < 3) return null;
+            return (
+              <div className="bg-yellow-400/90 rounded-xl px-3 py-2 mb-2 flex items-center gap-2">
+                <span className="text-lg">⚠️</span>
+                <p className="text-yellow-900 text-xs font-black">
+                  前回から{diff.toFixed(1)}kgの変化があります。入力を確認してください。
+                </p>
+              </div>
+            );
+          })()}
+
           <button
             onClick={handleSave}
             className="w-full bg-white text-teal-600 font-black py-3 rounded-xl text-base shadow active:scale-95 transition-transform flex items-center justify-center gap-2"
@@ -178,6 +223,11 @@ export default function HomePage() {
               <>
                 <CheckCircle size={18} className="text-green-500" />
                 <span className="text-green-500">記録しました！🎉</span>
+              </>
+            ) : todayRecord ? (
+              <>
+                <Zap size={18} />
+                更新する
               </>
             ) : (
               <>
@@ -262,8 +312,12 @@ export default function HomePage() {
           <p className="text-gray-700 text-sm font-medium mb-3">
             現在{" "}
             <span className="font-black text-gray-900">{currentWeight}kg</span>　あと{" "}
-            <span className="font-black text-orange-500">{remaining.toFixed(1)}kg</span>　残り{" "}
-            <span className="font-black text-blue-500">{daysLeft}日</span>
+            <span className="font-black text-orange-500">{remaining.toFixed(1)}kg</span>
+            {daysLeft > 0 ? (
+              <>残り <span className="font-black text-blue-500">{daysLeft}日</span></>
+            ) : (
+              <span className="font-black text-gray-400">期限終了</span>
+            )}
           </p>
 
           <div className="flex justify-center mb-2">
@@ -343,126 +397,6 @@ export default function HomePage() {
 
         {displayBmi !== null && <BMICard bmi={displayBmi} height={profile.height} currentWeight={currentWeight} age={age} gender={profile.gender} />}
 
-        {/* Calorie summary */}
-        {showMealExercise && <div className="bg-white rounded-2xl shadow-lg p-4">
-          <h3 className="font-bold text-gray-700 mb-3 text-sm">⚖️ 今日のカロリー収支</h3>
-
-          {/* メイン：グレー背景＋色付き数字（ラベルも数字と色を合わせて見やすく） */}
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            <div className="bg-gray-50 rounded-xl py-2.5 text-center">
-              <div className="text-lg mb-0.5">🍽️</div>
-              <div className="text-xs font-bold text-blue-500 mb-1">食事</div>
-              <div className="text-2xl font-black text-blue-600 leading-none">{totalCalories}</div>
-              <div className="text-[9px] text-gray-400 mt-1">kcal</div>
-            </div>
-            <div className="bg-gray-50 rounded-xl py-2.5 text-center">
-              <div className="text-lg mb-0.5">🔥</div>
-              <div className="text-xs font-bold text-green-600 mb-1">消費</div>
-              <div className="text-2xl font-black text-green-600 leading-none">{totalBurned}</div>
-              <div className="text-[9px] text-gray-400 mt-1">kcal</div>
-            </div>
-            <div className="bg-gray-50 rounded-xl py-2.5 text-center">
-              <div className="text-lg mb-0.5">{totalCalories - totalBurned > 0 ? "⚠️" : "✨"}</div>
-              <div className={`text-xs font-bold mb-1 ${
-                totalCalories === 0
-                  ? "text-gray-600"
-                  : totalCalories - totalBurned > 0
-                  ? "text-red-500"
-                  : "text-green-600"
-              }`}>差引</div>
-              <div className={`text-2xl font-black leading-none ${
-                totalCalories === 0
-                  ? "text-gray-500"
-                  : totalCalories - totalBurned > 0
-                  ? "text-red-600"
-                  : "text-green-700"
-              }`}>
-                {totalCalories - totalBurned > 0 ? "+" : ""}{totalCalories - totalBurned}
-              </div>
-              <div className="text-[9px] text-gray-400 mt-1">kcal</div>
-            </div>
-          </div>
-
-          {/* 状態メッセージ（グレー基調・絵文字で状態を表現） */}
-          {(() => {
-            const net = totalCalories - totalBurned;
-            let msg = "", icon = "";
-            if (totalCalories === 0) {
-              msg = "まだ食事が記録されていません";
-              icon = "📝";
-            } else if (net < -300) {
-              msg = `カロリー不足ペース！体重が減りやすい状態です`;
-              icon = "🔥";
-            } else if (net < 0) {
-              msg = `${Math.abs(net)} kcal の黒字。ダイエット効果あり`;
-              icon = "✨";
-            } else if (net < 200) {
-              msg = `バランス良好（差 ${net} kcal）`;
-              icon = "⚖️";
-            } else {
-              msg = `${net} kcal オーバー。明日は控えめに`;
-              icon = "⚠️";
-            }
-            return (
-              <div className="bg-gray-50 rounded-xl px-3 py-2 text-xs font-bold flex items-center gap-2 mb-3 text-gray-600">
-                <span className="text-base">{icon}</span>
-                <span>{msg}</span>
-              </div>
-            );
-          })()}
-
-          {/* 消費内訳（基礎代謝 + 運動）：合計だけ消費と同じ緑で関連付け */}
-          {bmr && (
-            <div className="border border-gray-100 rounded-xl p-2.5 mb-3">
-              <p className="text-[10px] font-bold text-gray-500 mb-2 text-center">🔥 消費カロリーの内訳</p>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="text-center">
-                  <div className="text-[9px] text-gray-500 mb-1">基礎代謝</div>
-                  <div className="text-base font-black text-gray-700 leading-none">{bmr}</div>
-                  <div className="text-[9px] text-gray-400 mt-1">kcal</div>
-                </div>
-                <div className="text-center border-x border-gray-100">
-                  <div className="text-[9px] text-gray-500 mb-1">運動</div>
-                  <div className="text-base font-black text-gray-700 leading-none">{burnedCalories}</div>
-                  <div className="text-[9px] text-gray-400 mt-1">kcal</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-[9px] text-gray-500 mb-1">合計</div>
-                  <div className="text-base font-black text-green-600 leading-none">{totalBurned}</div>
-                  <div className="text-[9px] text-gray-400 mt-1">kcal</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 摂取目標プログレスバー */}
-          <div>
-            <div className="flex justify-between text-[11px] mb-1">
-              <span className="text-gray-500">🍽️ 摂取目標まで</span>
-              <span className={`font-bold ${
-                totalCalories > profile.targetCalories ? "text-red-500" : "text-gray-700"
-              }`}>
-                {totalCalories > profile.targetCalories
-                  ? `+${totalCalories - profile.targetCalories} kcal オーバー`
-                  : `あと ${profile.targetCalories - totalCalories} kcal`}
-              </span>
-            </div>
-            <div className="w-full bg-gray-100 rounded-full h-2.5 relative">
-              <div
-                className={`h-2.5 rounded-full transition-all duration-700 ${
-                  totalCalories > profile.targetCalories
-                    ? "bg-gradient-to-r from-red-400 to-red-500"
-                    : "bg-gradient-to-r from-amber-400 to-orange-500"
-                }`}
-                style={{ width: `${Math.min(100, (totalCalories / profile.targetCalories) * 100)}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-              <span>0</span>
-              <span>目標 {profile.targetCalories} kcal</span>
-            </div>
-          </div>
-        </div>}
 
         {/* フッターロゴ */}
         <div className="flex justify-center pt-5 pb-3">

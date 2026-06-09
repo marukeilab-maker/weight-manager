@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { X, ChevronLeft, ChevronRight, ClipboardList } from "lucide-react";
-import { getMealRecord, saveMealRecord } from "@/lib/storage";
+import { getMealRecord, saveMealRecord, getProfile } from "@/lib/storage";
 import { today, addDays } from "@/lib/calculations";
 import { searchFoods, FoodItem } from "@/lib/foodDatabase";
 import { MealRecord } from "@/lib/types";
@@ -77,6 +77,8 @@ export default function MealsPage() {
   const [flashDish, setFlashDish] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const [customHistory, setCustomHistory] = useState<Dish[]>([]);
+  const [targetCalories, setTargetCalories] = useState<number>(0);
+  const [showAllHistory, setShowAllHistory] = useState(false);
   const isAutoDateRef = useRef(true);  // 自動日付モード（手動変更後はfalseに）
 
   // 手動で日付を変更（自動更新を停止）
@@ -92,6 +94,8 @@ export default function MealsPage() {
 
   useEffect(() => {
     setCustomHistory(loadCustomHistory());
+    const p = getProfile();
+    if (p) setTargetCalories(p.targetCalories);
   }, []);
 
   // 日付・スロットの自動更新（1分ごと＋画面復帰時）
@@ -114,7 +118,8 @@ export default function MealsPage() {
 
   // 料理を追加
   function addDish(dish: Dish) {
-    const current = slotDishes[activeSlot] ?? [];
+    // 「食事抜き」状態なら自動でクリアしてから追加
+    const current = (slotDishes[activeSlot] ?? []).filter((d) => d.name !== "食事抜き");
     const updated = { ...slotDishes, [activeSlot]: [...current, dish] };
     setSlotDishes(updated);
     saveSlotDishes(date, updated);
@@ -141,7 +146,7 @@ export default function MealsPage() {
 
   // カスタム料理を追加
   function addCustomDish() {
-    if (!customKcal) return;
+    if (!customKcal || Number(customKcal) <= 0) return;
     const dish: Dish = { name: customName.trim() || "カスタム料理", kcal: Number(customKcal) };
     addDish(dish);
     saveToCustomHistory(dish);
@@ -175,13 +180,12 @@ export default function MealsPage() {
     addDish({ name: `${label}（ざっくり）`, kcal });
   }
 
-  // 昨日と同じ料理をコピー
+  // 昨日と同じ料理をコピー（重複防止のため現在の内容を置き換え）
   function copyFromYesterday() {
     const yesterday = addDays(date, -1);
-    const yesterdayDishes = loadSlotDishes(yesterday)[activeSlot] ?? [];
+    const yesterdayDishes = (loadSlotDishes(yesterday)[activeSlot] ?? []).filter(d => d.name !== "食事抜き");
     if (yesterdayDishes.length === 0) return;
-    const current = slotDishes[activeSlot] ?? [];
-    const merged = [...current, ...yesterdayDishes];
+    const merged = [...yesterdayDishes];
     const updated = { ...slotDishes, [activeSlot]: merged };
     setSlotDishes(updated);
     saveSlotDishes(date, updated);
@@ -329,9 +333,29 @@ export default function MealsPage() {
             </button>
           </div>
         </div>
-        <div className="bg-white/20 rounded-2xl px-4 py-3 flex items-center justify-between">
-          <span className="text-white/80 text-sm font-bold">合計カロリー</span>
-          <span className="text-white text-3xl font-black">{totalAll} <span className="text-base font-bold opacity-80">kcal</span></span>
+        <div className="bg-white/20 rounded-2xl px-4 py-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-white/80 text-sm font-bold">合計カロリー</span>
+            <span className="text-white text-3xl font-black">{totalAll} <span className="text-base font-bold opacity-80">kcal</span></span>
+          </div>
+          {targetCalories > 0 && (
+            <>
+              <div className="w-full bg-white/20 rounded-full h-2 mb-1">
+                <div
+                  className={`h-2 rounded-full transition-all duration-500 ${totalAll > targetCalories ? "bg-red-300" : "bg-white"}`}
+                  style={{ width: `${Math.min(100, (totalAll / targetCalories) * 100)}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-white/70 text-[10px] font-bold">
+                <span>目標 {targetCalories} kcal</span>
+                <span className={totalAll > targetCalories ? "text-red-200 font-black" : "text-white font-black"}>
+                  {totalAll > targetCalories
+                    ? `${totalAll - targetCalories} kcal オーバー 🔺`
+                    : `あと ${targetCalories - totalAll} kcal`}
+                </span>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -370,19 +394,31 @@ export default function MealsPage() {
           })}
         </div>
 
-        {/* ── 昨日と同じ ── */}
+        {/* ── 食事抜き（料理未記録のスロット選択直後に表示） ── */}
+        {currentDishes.length === 0 && (
+          <div className="text-center -mt-1">
+            <button
+              onClick={skipMeal}
+              className="text-xs text-gray-400 underline underline-offset-2 active:text-gray-600 transition-colors"
+            >
+              🚫 この{SLOTS.find(s => s.key === activeSlot)?.label}を抜く
+            </button>
+          </div>
+        )}
+
+        {/* ── 昨日と同じ（目立つカラーボタン） ── */}
         {yesterdayDishCount() > 0 && (
           <button
             onClick={copyFromYesterday}
-            className={`w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow transition-all active:scale-95 ${
+            className={`w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 ${
               flashDish === "昨日と同じ"
-                ? "bg-green-50 text-green-600 ring-2 ring-green-300"
-                : "bg-white text-gray-700 hover:bg-orange-50"
+                ? "bg-green-400 text-white"
+                : "bg-gradient-to-r from-orange-400 to-pink-400 text-white"
             }`}
           >
             <span className="text-lg">📋</span>
-            <span>昨日と同じものを追加</span>
-            <span className="text-xs text-gray-400 font-medium">（{yesterdayDishCount()}品）</span>
+            <span>昨日と同じものをコピー</span>
+            <span className="bg-white/20 text-white text-xs font-black px-1.5 py-0.5 rounded-full">{yesterdayDishCount()}品</span>
           </button>
         )}
 
@@ -455,77 +491,86 @@ export default function MealsPage() {
             </div>
           )}
           {searchQuery.length > 0 && searchResults.length === 0 && (
-            <p className="text-xs text-gray-400 text-center py-2">見つかりませんでした。下のフォームで手動入力できます。</p>
+            <p className="text-xs text-gray-400 text-center py-2">見つかりませんでした。「新しく追加」から手動入力できます。</p>
           )}
         </div>
 
-        {/* ── カスタム入力 ── */}
-        <div className="bg-white rounded-2xl shadow-lg p-4">
-          <p className="text-xs font-bold text-gray-400 mb-3">✏️ カロリーを手動で入力</p>
-          <div className="flex gap-2 mb-2">
-            <input
-              type="text"
-              value={customName}
-              onChange={(e) => setCustomName(e.target.value)}
-              placeholder="料理名（任意）"
-              className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-orange-400 transition-colors"
-            />
-            <input
-              type="number"
-              value={customKcal}
-              onChange={(e) => setCustomKcal(e.target.value)}
-              placeholder="kcal"
-              className="w-24 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-center outline-none focus:border-orange-400 transition-colors"
-            />
+        {/* ── よく使う料理 ＋ 手動追加（統合カード） ── */}
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          <div className="px-4 pt-4 pb-1 flex items-center justify-between">
+            <p className="text-xs font-bold text-gray-500">⭐ よく使う料理</p>
+            <p className="text-[10px] text-gray-400">タップで追加</p>
           </div>
-          <button
-            onClick={addCustomDish}
-            disabled={!customKcal}
-            className="w-full py-2.5 bg-gradient-to-r from-orange-400 to-pink-500 text-white font-bold rounded-xl disabled:opacity-40 active:scale-95 transition-all"
-          >
-            追加する
-          </button>
 
-          {/* 履歴 */}
-          {customHistory.length > 0 && (
-            <div className="mt-4">
-              <p className="text-[10px] font-bold text-gray-400 mb-2">🕘 よく使う料理（タップで追加）</p>
-              <div className="space-y-1.5">
-                {customHistory.map((dish) => (
-                  <div key={dish.name} className="flex items-center gap-2">
-                    <button
-                      onClick={() => addDish(dish)}
-                      className={`flex-1 flex items-center justify-between px-3 py-2 rounded-xl text-left transition-all active:scale-95 ${
-                        flashDish === dish.name ? "bg-green-50 ring-2 ring-green-300" : "bg-gray-50 hover:bg-orange-50"
-                      }`}
-                    >
-                      <span className="text-sm font-bold text-gray-700 truncate">{dish.name}</span>
-                      <span className="text-orange-500 font-black text-sm ml-2 shrink-0">{dish.kcal} kcal</span>
-                    </button>
-                    <button
-                      onClick={() => deleteFromHistory(dish.name)}
-                      className="text-gray-300 hover:text-red-400 transition-colors p-1"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
+          {/* 料理リスト */}
+          {customHistory.length > 0 ? (
+            <div className="px-4 pb-3 space-y-1.5 mt-2">
+              {(showAllHistory ? customHistory : customHistory.slice(0, 6)).map((dish) => (
+                <div key={dish.name} className="flex items-center gap-2">
+                  <button
+                    onClick={() => addDish(dish)}
+                    className={`flex-1 flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-all active:scale-95 ${
+                      flashDish === dish.name
+                        ? "bg-green-50 ring-2 ring-green-300"
+                        : "bg-orange-50 hover:bg-orange-100"
+                    }`}
+                  >
+                    <span className="text-sm font-bold text-gray-700 truncate">{dish.name}</span>
+                    <span className="text-orange-500 font-black text-sm ml-2 shrink-0">{dish.kcal} kcal</span>
+                  </button>
+                  <button
+                    onClick={() => deleteFromHistory(dish.name)}
+                    className="text-gray-300 hover:text-red-400 transition-colors p-1.5"
+                    aria-label="削除"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+              {customHistory.length > 6 && (
+                <button
+                  onClick={() => setShowAllHistory(v => !v)}
+                  className="w-full text-xs text-gray-400 font-bold py-1.5 hover:text-gray-600 transition-colors"
+                >
+                  {showAllHistory ? "▲ 閉じる" : `▼ もっと見る（あと${customHistory.length - 6}件）`}
+                </button>
+              )}
             </div>
+          ) : (
+            <p className="text-xs text-gray-400 text-center py-4">まだ登録された料理がありません</p>
           )}
-        </div>
 
-        {/* ── 食事抜き（料理が未記録の時のみ表示） ── */}
-        {currentDishes.length === 0 && (
-          <div className="text-center">
+          {/* 区切り線＋追加フォーム */}
+          <div className="border-t border-gray-100 px-4 py-3">
+            <p className="text-[10px] font-bold text-gray-400 mb-2">✏️ 新しく追加</p>
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addCustomDish()}
+                placeholder="料理名（任意）"
+                className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-orange-400 transition-colors"
+              />
+              <input
+                type="number"
+                value={customKcal}
+                onChange={(e) => setCustomKcal(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addCustomDish()}
+                placeholder="kcal"
+                className="w-20 border-2 border-gray-200 rounded-xl px-2 py-2 text-sm font-bold text-center outline-none focus:border-orange-400 transition-colors"
+              />
+            </div>
             <button
-              onClick={skipMeal}
-              className="text-xs text-gray-400 underline underline-offset-2 active:text-gray-600 transition-colors"
+              onClick={addCustomDish}
+              disabled={!customKcal || Number(customKcal) <= 0}
+              className="w-full py-2.5 bg-gradient-to-r from-orange-400 to-pink-500 text-white font-bold rounded-xl disabled:opacity-40 active:scale-95 transition-all text-sm"
             >
-              🚫 この{SLOTS.find(s => s.key === activeSlot)?.label}を抜く
+              追加する
             </button>
           </div>
-        )}
+        </div>
+
 
         {/* ── 選択中の料理一覧 ── */}
         {currentDishes.length > 0 && (

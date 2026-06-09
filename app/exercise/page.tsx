@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Plus, Trash2, Flame, Timer, ChevronLeft, ChevronRight } from "lucide-react";
-import { getExerciseRecord, saveExerciseRecord, getWeightRecords } from "@/lib/storage";
+import { Plus, Trash2, Flame, Timer, ChevronLeft, ChevronRight, History } from "lucide-react";
+import { getExerciseRecord, saveExerciseRecord, getWeightRecords, getProfile, getAllExercises } from "@/lib/storage";
 import { today, addDays } from "@/lib/calculations";
 import { MET_VALUES, calcBurnedCalories } from "@/lib/calculations";
 import { ExerciseEntry, ExerciseRecord } from "@/lib/types";
@@ -32,6 +32,7 @@ export default function ExercisePage() {
   const [minutes, setMinutes] = useState("");
   const [bodyWeight, setBodyWeight] = useState(70);
   const [added, setAdded] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const isAutoDateRef = useRef(true);
 
   const changeDate = (d: string) => {
@@ -43,7 +44,13 @@ export default function ExercisePage() {
     const r = getExerciseRecord(date);
     setRecord(r);
     const recs = getWeightRecords();
-    if (recs.length) setBodyWeight(recs[recs.length - 1].weight);
+    if (recs.length) {
+      setBodyWeight(recs[recs.length - 1].weight);
+    } else {
+      // 体重記録がない場合はプロフィールの目標体重を参考にする
+      const p = getProfile();
+      if (p && p.goalWeight > 0) setBodyWeight(p.goalWeight);
+    }
   }, [date]);
 
   // 日付の自動更新（1分ごと＋画面復帰時＋フォーカス時）
@@ -64,7 +71,7 @@ export default function ExercisePage() {
   }, []);
 
   function addEntry() {
-    if (!minutes) return;
+    if (!minutes || Number(minutes) <= 0) return;
     const met = MET_VALUES[selected.key];
     const cal = calcBurnedCalories(met, bodyWeight, Number(minutes));
     const entry: ExerciseEntry = { type: selected.key, minutes: Number(minutes), calories: cal, met };
@@ -81,6 +88,15 @@ export default function ExercisePage() {
     setRecord(updated);
     saveExerciseRecord(updated);
   }
+
+  // 過去7日間の運動履歴
+  const recentHistory = (() => {
+    const all = getAllExercises();
+    return all
+      .filter((r) => r.date < date && r.entries.length > 0)
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 7);
+  })();
 
   const totalBurned = record.entries.reduce((s, e) => s + e.calories, 0);
   const preview = minutes
@@ -163,11 +179,12 @@ export default function ExercisePage() {
           {/* 選択中の運動表示 */}
           <div className={`flex items-center gap-3 bg-gradient-to-r ${selected.color} rounded-xl px-4 py-3 mb-4`}>
             <span className="text-2xl">{selected.icon}</span>
-            <div>
+            <div className="flex-1">
               <div className="text-white font-black text-base">{selected.key}</div>
-              <div className="text-white/75 text-xs">MET値 {MET_VALUES[selected.key]}</div>
+              <div className="text-white/75 text-xs">
+                {MET_VALUES[selected.key] <= 3 ? "強度：低" : MET_VALUES[selected.key] <= 5 ? "強度：中" : MET_VALUES[selected.key] <= 7 ? "強度：高" : "強度：非常に高い"}
+              </div>
             </div>
-            <ChevronRight size={16} className="text-white/60 ml-auto" />
           </div>
 
           {/* クイック入力ボタン */}
@@ -252,6 +269,45 @@ export default function ExercisePage() {
                   >
                     <Trash2 size={16} />
                   </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* 過去の運動履歴 */}
+        {recentHistory.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <button
+              onClick={() => setShowHistory((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 border-b border-gray-50"
+            >
+              <div className="flex items-center gap-2">
+                <History size={14} className="text-gray-400" />
+                <p className="text-xs font-bold text-gray-500">過去の運動履歴</p>
+              </div>
+              <span className="text-xs text-gray-400">{showHistory ? "▲ 閉じる" : "▼ 開く"}</span>
+            </button>
+            {showHistory && recentHistory.map((r) => {
+              const d = new Date(r.date + "T00:00:00");
+              const label = d.toLocaleDateString("ja-JP", { month: "short", day: "numeric", weekday: "short" });
+              const dayTotal = r.entries.reduce((s, e) => s + e.calories, 0);
+              return (
+                <div key={r.date} className="px-4 py-3 border-b border-gray-50 last:border-0">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold text-gray-500">{label}</span>
+                    <span className="text-xs font-black text-green-600">{dayTotal} kcal</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {r.entries.map((e, i) => {
+                      const ex = EXERCISES.find((x) => x.key === e.type) ?? EXERCISES[EXERCISES.length - 1];
+                      return (
+                        <span key={i} className="inline-flex items-center gap-1 bg-gray-50 rounded-lg px-2 py-1 text-[10px] font-bold text-gray-600">
+                          {ex.icon} {e.type} {e.minutes}分
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })}

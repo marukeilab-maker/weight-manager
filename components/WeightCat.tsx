@@ -23,18 +23,20 @@ export default function WeightCat({ progress, bmi, startBmi, goalBmi }: Props) {
   const startStage = startBmi != null && startBmi > 0 ? stageByBmi(startBmi) : 0;
 
   const isUnderweight = bmi != null && bmi > 0 && bmi < 18.5;
+  // 現在体重が美容体重以下（18.5≤BMI<20）→ キラキラなし
+  const isBelowBeautyCurrent = bmi != null && bmi > 0 && bmi >= 18.5 && bmi < 20;
   // 目標体重が健康範囲外（BMI 18.5未満）→ 祝福なし
   const isUnhealthyGoal = goalBmi != null && goalBmi > 0 && goalBmi < 18.5;
   // 目標体重が美容体重以下（BMI 20未満・健康範囲内）→ キラキラなし・スリムこたろう
   const isBelowBeautyGoal = goalBmi != null && goalBmi >= 18.5 && goalBmi < 20;
-  const isWin = p >= 100 && !isUnderweight && !isUnhealthyGoal && !isBelowBeautyGoal;
+  const isWin = p >= 100 && !isUnderweight && !isUnhealthyGoal && !isBelowBeautyGoal && !isBelowBeautyCurrent;
 
   // cat-4 は「達成時」だけの特別な画像（手を上げてキラキラ）。
   // 道中は cat-0〜cat-3 のみを使い、達成率に応じて cat-3 へ近づく。
   let stage: number;
   if (isWin) {
     stage = 4;
-  } else if (p >= 100 && isBelowBeautyGoal && !isUnderweight) {
+  } else if (p >= 100 && (isBelowBeautyGoal || isBelowBeautyCurrent) && !isUnderweight) {
     stage = 4; // cat-4をキラキラなしで使用
   } else {
     const start = Math.min(3, startStage);
@@ -49,7 +51,7 @@ export default function WeightCat({ progress, bmi, startBmi, goalBmi }: Props) {
   if (isUnderweight || (p >= 100 && isUnhealthyGoal)) {
     message = "もう十分スリム！無理は禁物だよ🐱";
     highlight = true;
-  } else if (p >= 100 && isBelowBeautyGoal) {
+  } else if (p >= 100 && (isBelowBeautyGoal || isBelowBeautyCurrent)) {
     message = "目標達成！スリムでキレイだよ✨";
     highlight = true;
   } else if (isWin) {

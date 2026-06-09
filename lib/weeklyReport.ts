@@ -158,7 +158,8 @@ export function getWeeklyReport(
     (s, m) => s + m.breakfast + m.lunch + m.dinner + m.snack,
     0
   );
-  const avgCalories = weekMeals.length > 0 ? Math.round(totalCalories / days.length) : 0;
+  // 記録した日数で割る（7日で割ると記録のない日が低く見える）
+  const avgCalories = weekMeals.length > 0 ? Math.round(totalCalories / weekMeals.length) : 0;
 
   // 運動日数
   const weekExercises = allExercises.filter(

@@ -34,6 +34,11 @@ export function getWeightRecords(): WeightRecord[] {
   return load<WeightRecord[]>(KEYS.records) ?? [];
 }
 
+export function deleteWeightRecord(date: string): void {
+  const records = getWeightRecords().filter((r) => r.date !== date);
+  save(KEYS.records, records);
+}
+
 export function saveWeightRecord(record: WeightRecord): void {
   const records = getWeightRecords();
   const idx = records.findIndex((r) => r.date === record.date);

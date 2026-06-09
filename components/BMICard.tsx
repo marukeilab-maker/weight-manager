@@ -40,6 +40,7 @@ function toPercent(val: number) {
 export default function BMICard({ bmi, height, currentWeight, age, gender }: Props) {
   const range = getRange(bmi);
   const pointerPct = toPercent(bmi);
+  const [expanded, setExpanded] = useState(false);
 
   // 体脂肪率の推定（年齢・性別が揃っている時のみ）
   const bodyFat = age && gender ? calcBodyFat(bmi, age, gender) : null;
@@ -194,129 +195,141 @@ export default function BMICard({ bmi, height, currentWeight, age, gender }: Pro
         ))}
       </div>
 
-      {/* 推定体脂肪率 */}
-      {bodyFat !== null && bfCat && (
-        <div className="mt-4 pt-3 border-t border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
-                推定体脂肪率
-              </p>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-black" style={{ color: bfCat.color }}>
-                  {bodyFat}
-                </span>
-                <span className="text-sm font-bold text-gray-400">%</span>
-                <span
-                  className="text-xs font-bold px-2 py-0.5 rounded-full ml-1"
-                  style={{ background: `${bfCat.color}22`, color: bfCat.color }}
-                >
-                  {bfCat.label}
-                </span>
+      {/* 詳細情報（折りたたみ） */}
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full mt-3 flex items-center justify-center gap-1 text-[11px] font-bold text-gray-400 py-1 active:opacity-60 transition-opacity"
+      >
+        {expanded ? "▲ 詳細を閉じる" : "▼ 体脂肪・体重目安を見る"}
+      </button>
+
+      {expanded && (
+        <>
+          {/* 推定体脂肪率 */}
+          {bodyFat !== null && bfCat && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                    推定体脂肪率
+                  </p>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-3xl font-black" style={{ color: bfCat.color }}>
+                      {bodyFat}
+                    </span>
+                    <span className="text-sm font-bold text-gray-400">%</span>
+                    <span
+                      className="text-xs font-bold px-2 py-0.5 rounded-full ml-1"
+                      style={{ background: `${bfCat.color}22`, color: bfCat.color }}
+                    >
+                      {bfCat.label}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-[9px] text-gray-300 text-right leading-tight max-w-[100px]">
+                  身長・体重・年齢・性別からの推定値
+                </p>
               </div>
-            </div>
-            <p className="text-[9px] text-gray-300 text-right leading-tight max-w-[100px]">
-              身長・体重・年齢・性別からの推定値
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* 健康的体重の目安 */}
-      {idealWeight > 0 && (
-        <div className="mt-4 pt-3 border-t border-gray-100">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
-              🎯 健康的体重の目安
-            </p>
-            {idealDiff !== null && (
-              <p className="text-[10px] font-bold text-gray-400">
-                理想まで{" "}
-                <span className="text-gray-600">
-                  {idealDiff > 0 ? "−" : idealDiff < 0 ? "+" : ""}
-                  {Math.abs(idealDiff).toFixed(1)}kg
-                </span>
-              </p>
-            )}
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              onClick={() => setSelected(selected?.label === "美容体重" ? null : { label: "美容体重", target: beautyWeight })}
-              className={`bg-gray-50 rounded-xl py-2.5 px-1 text-center flex flex-col justify-between min-h-[78px] active:scale-95 transition-all ${selected?.label === "美容体重" ? "ring-2 ring-blue-300" : ""}`}
-            >
-              <p className="text-[10px] font-bold text-gray-500">美容体重</p>
-              <p className="font-black text-gray-700 leading-none">
-                <span className="text-lg">{beautyWeight}</span>
-                <span className="text-[10px] ml-0.5 text-gray-400">kg</span>
-              </p>
-              <p className="text-[9px] text-gray-400">BMI 20</p>
-            </button>
-            <button
-              onClick={() => setSelected(selected?.label === "健康範囲" ? null : { label: "健康範囲", target: maxHealthy })}
-              className={`bg-gray-100 rounded-xl py-2.5 px-1 text-center flex flex-col justify-between min-h-[78px] active:scale-95 transition-all ${selected?.label === "健康範囲" ? "ring-2 ring-green-300" : ""}`}
-            >
-              <p className="text-[10px] font-bold text-gray-600">健康範囲</p>
-              <p className="font-black text-gray-800 leading-none whitespace-nowrap">
-                <span className="text-sm">{minHealthy}</span>
-                <span className="text-[9px] mx-px text-gray-400">〜</span>
-                <span className="text-sm">{maxHealthy}</span>
-              </p>
-              <p className="text-[9px] text-gray-400">BMI 18.5〜25</p>
-            </button>
-            <button
-              onClick={() => setSelected(selected?.label === "理想体重" ? null : { label: "理想体重", target: idealWeight })}
-              className={`bg-gray-50 rounded-xl py-2.5 px-1 text-center flex flex-col justify-between min-h-[78px] active:scale-95 transition-all ${selected?.label === "理想体重" ? "ring-2 ring-orange-300" : ""}`}
-            >
-              <p className="text-[10px] font-bold text-gray-500">理想体重</p>
-              <p className="font-black text-gray-700 leading-none">
-                <span className="text-lg">{idealWeight}</span>
-                <span className="text-[10px] ml-0.5 text-gray-400">kg</span>
-              </p>
-              <p className="text-[9px] text-gray-400">BMI 22</p>
-            </button>
-          </div>
-
-          {/* 健康的に減らしてよいペースの目安（体重の0.5〜1%/週） */}
-          {currentWeight && currentWeight > 0 && (
-            <div className="mt-2 bg-blue-50 rounded-xl p-2.5 text-center">
-              <p className="text-[10px] font-bold text-blue-500 mb-0.5">💡 健康的に減らせるペースの目安</p>
-              <p className="text-xs text-gray-600">
-                週に体重の <span className="font-bold">0.5〜1%</span> まで＝
-                <span className="font-black text-blue-600 mx-0.5">
-                  {(currentWeight * 0.005).toFixed(1)}〜{(currentWeight * 0.01).toFixed(1)}
-                </span>
-                kg/週
-              </p>
-              <p className="text-[9px] text-gray-400 mt-0.5">
-                （1ヶ月で約 {(currentWeight * 0.02).toFixed(1)}〜{(currentWeight * 0.04).toFixed(1)} kg が無理のない範囲）
-              </p>
             </div>
           )}
 
-          {/* タップした目標までの所要日数 */}
-          {selected && est && (
-            <div className="mt-2 bg-teal-50 rounded-xl p-3 text-center">
-              {est.done ? (
-                <p className="text-sm font-bold text-green-600">
-                  ✨ {selected.label}（{selected.target}kg）はすでに達成しています！
+          {/* 健康的体重の目安 */}
+          {idealWeight > 0 && (
+            <div className="mt-4 pt-3 border-t border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+                  🎯 健康的体重の目安
                 </p>
-              ) : (
-                <>
-                  <p className="text-[11px] text-gray-500 mb-1">
-                    現在 {currentWeight}kg → {selected.label} {selected.target}kg（あと <span className="font-bold text-teal-600">{est.diff}kg</span>）
+                {idealDiff !== null && (
+                  <p className="text-[10px] font-bold text-gray-400">
+                    理想まで{" "}
+                    <span className="text-gray-600">
+                      {idealDiff > 0 ? "−" : idealDiff < 0 ? "+" : ""}
+                      {Math.abs(idealDiff).toFixed(1)}kg
+                    </span>
                   </p>
-                  <p className="text-sm font-bold text-gray-700">
-                    健康的なペース（0.5kg/週）で
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => setSelected(selected?.label === "美容体重" ? null : { label: "美容体重", target: beautyWeight })}
+                  className={`bg-gray-50 rounded-xl py-2.5 px-1 text-center flex flex-col justify-between min-h-[78px] active:scale-95 transition-all ${selected?.label === "美容体重" ? "ring-2 ring-blue-300" : ""}`}
+                >
+                  <p className="text-[10px] font-bold text-gray-500">美容体重</p>
+                  <p className="font-black text-gray-700 leading-none">
+                    <span className="text-lg">{beautyWeight}</span>
+                    <span className="text-[10px] ml-0.5 text-gray-400">kg</span>
                   </p>
-                  <p className="text-amber-600 font-black">
-                    約 <span className="text-2xl">{est.days}</span> 日
-                    <span className="text-xs text-gray-400 ml-1">（約{Math.round(est.days / 30 * 10) / 10}ヶ月）</span>
+                  <p className="text-[9px] text-gray-400">BMI 20</p>
+                </button>
+                <button
+                  onClick={() => setSelected(selected?.label === "健康範囲" ? null : { label: "健康範囲", target: maxHealthy })}
+                  className={`bg-gray-100 rounded-xl py-2.5 px-1 text-center flex flex-col justify-between min-h-[78px] active:scale-95 transition-all ${selected?.label === "健康範囲" ? "ring-2 ring-green-300" : ""}`}
+                >
+                  <p className="text-[10px] font-bold text-gray-600">健康範囲</p>
+                  <p className="font-black text-gray-800 leading-none whitespace-nowrap">
+                    <span className="text-sm">{minHealthy}</span>
+                    <span className="text-[9px] mx-px text-gray-400">〜</span>
+                    <span className="text-sm">{maxHealthy}</span>
                   </p>
-                </>
+                  <p className="text-[9px] text-gray-400">BMI 18.5〜25</p>
+                </button>
+                <button
+                  onClick={() => setSelected(selected?.label === "理想体重" ? null : { label: "理想体重", target: idealWeight })}
+                  className={`bg-gray-50 rounded-xl py-2.5 px-1 text-center flex flex-col justify-between min-h-[78px] active:scale-95 transition-all ${selected?.label === "理想体重" ? "ring-2 ring-orange-300" : ""}`}
+                >
+                  <p className="text-[10px] font-bold text-gray-500">理想体重</p>
+                  <p className="font-black text-gray-700 leading-none">
+                    <span className="text-lg">{idealWeight}</span>
+                    <span className="text-[10px] ml-0.5 text-gray-400">kg</span>
+                  </p>
+                  <p className="text-[9px] text-gray-400">BMI 22</p>
+                </button>
+              </div>
+
+              {/* 健康的に減らしてよいペースの目安 */}
+              {currentWeight && currentWeight > 0 && (
+                <div className="mt-2 bg-blue-50 rounded-xl p-2.5 text-center">
+                  <p className="text-[10px] font-bold text-blue-500 mb-0.5">💡 健康的に減らせるペースの目安</p>
+                  <p className="text-xs text-gray-600">
+                    週に体重の <span className="font-bold">0.5〜1%</span> まで＝
+                    <span className="font-black text-blue-600 mx-0.5">
+                      {(currentWeight * 0.005).toFixed(1)}〜{(currentWeight * 0.01).toFixed(1)}
+                    </span>
+                    kg/週
+                  </p>
+                  <p className="text-[9px] text-gray-400 mt-0.5">
+                    （1ヶ月で約 {(currentWeight * 0.02).toFixed(1)}〜{(currentWeight * 0.04).toFixed(1)} kg が無理のない範囲）
+                  </p>
+                </div>
+              )}
+
+              {/* タップした目標までの所要日数 */}
+              {selected && est && (
+                <div className="mt-2 bg-teal-50 rounded-xl p-3 text-center">
+                  {est.done ? (
+                    <p className="text-sm font-bold text-green-600">
+                      ✨ {selected.label}（{selected.target}kg）はすでに達成しています！
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-[11px] text-gray-500 mb-1">
+                        現在 {currentWeight}kg → {selected.label} {selected.target}kg（あと <span className="font-bold text-teal-600">{est.diff}kg</span>）
+                      </p>
+                      <p className="text-sm font-bold text-gray-700">
+                        健康的なペース（0.5kg/週）で
+                      </p>
+                      <p className="text-amber-600 font-black">
+                        約 <span className="text-2xl">{est.days}</span> 日
+                        <span className="text-xs text-gray-400 ml-1">（約{Math.round(est.days / 30 * 10) / 10}ヶ月）</span>
+                      </p>
+                    </>
+                  )}
+                </div>
               )}
             </div>
           )}
-        </div>
+        </>
       )}
       </div>
     </div>
