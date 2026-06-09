@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { TrendingDown, TrendingUp, Minus, CheckCircle, Zap } from "lucide-react";
+import { TrendingDown, TrendingUp, Minus, CheckCircle, Zap, Download } from "lucide-react";
 import Onboarding from "@/components/Onboarding";
 import WeightPicker from "@/components/WeightPicker";
 import ProgressCircle from "@/components/ProgressCircle";
@@ -22,6 +22,7 @@ import {
   today,
   formatDate,
   calcAge,
+  calcBMR,
 } from "@/lib/calculations";
 import { getDailyCatMessage } from "@/lib/catMessages";
 import { Profile, WeightRecord } from "@/lib/types";
@@ -36,6 +37,9 @@ export default function HomePage() {
   const [now, setNow] = useState(new Date());
   const [weeklyReport, setWeeklyReport] = useState<WeeklyReport | null>(null);
   const [reportDismissed, setReportDismissed] = useState(false);
+  const [backupDays, setBackupDays] = useState<number | null>(null);
+  const [backupDismissed, setBackupDismissed] = useState(false);
+  const [showMealExercise, setShowMealExercise] = useState(true);
 
   const loadData = useCallback(() => {
     const p = getProfile();
@@ -55,6 +59,18 @@ export default function HomePage() {
     // 週次レポート生成
     const report = getWeeklyReport(recs, getAllMeals(), getAllExercises());
     setWeeklyReport(report);
+    // バックアップ経過日数チェック
+    const lastBackup = localStorage.getItem("wm_last_backup");
+    if (lastBackup) {
+      const diff = Math.floor((new Date(today() + "T00:00:00").getTime() - new Date(lastBackup + "T00:00:00").getTime()) / 86400000);
+      setBackupDays(diff);
+    } else {
+      // 一度もバックアップしていない場合、記録が3件以上あれば警告
+      const recs = getWeightRecords();
+      if (recs.length >= 3) setBackupDays(999);
+    }
+    setBackupDismissed(localStorage.getItem("wm_backup_dismissed_" + today()) === "1");
+    setShowMealExercise(localStorage.getItem("wm_show_meal_exercise") !== "false");
     // 今週月曜日に既に閉じたかチェック
     const thisMonday = (() => {
       const now = new Date();
@@ -98,6 +114,25 @@ export default function HomePage() {
     loadData();
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+  }
+
+  function handleBackup() {
+    const BACKUP_KEYS = ["wm_profile", "wm_records", "wm_meals", "wm_exercises", "wm_meal_dishes"];
+    const backup: Record<string, unknown> = {};
+    BACKUP_KEYS.forEach((k) => {
+      const v = localStorage.getItem(k);
+      if (v) backup[k] = JSON.parse(v);
+    });
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `kotaro-backup-${today()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    localStorage.setItem("wm_last_backup", today());
+    setBackupDays(0);
+    setBackupDismissed(true);
   }
 
   if (!mounted) return null;
@@ -240,6 +275,37 @@ export default function HomePage() {
       </div>
 
       <div className="px-4 mt-4 space-y-4">
+
+        {/* バックアップ警告バナー */}
+        {!backupDismissed && backupDays !== null && backupDays >= 7 && (
+          <div className="bg-amber-50 border border-amber-300 rounded-2xl p-3 flex items-center gap-3">
+            <span className="text-2xl">💾</span>
+            <div className="flex-1">
+              <p className="text-xs font-black text-amber-700">
+                {backupDays === 999 ? "まだバックアップがありません" : `${backupDays}日間バックアップしていません`}
+              </p>
+              <p className="text-[11px] text-amber-600 mt-0.5">データを保護するためにバックアップを保存してください</p>
+            </div>
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={handleBackup}
+                className="bg-amber-400 text-white text-[11px] font-black px-3 py-1.5 rounded-lg flex items-center gap-1 active:scale-95"
+              >
+                <Download size={11} />保存
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.setItem("wm_backup_dismissed_" + today(), "1");
+                  setBackupDismissed(true);
+                }}
+                className="text-[10px] text-amber-400 text-center"
+              >
+                あとで
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 週次レポート（先週データがあり、まだ閉じていない場合に表示） */}
         {weeklyReport && !reportDismissed && (
           <div className="bg-white rounded-2xl shadow-lg p-4 border border-teal-100">
@@ -366,9 +432,91 @@ export default function HomePage() {
                     </p>
                   );
                 })()}
+
+              {/* 達成予測日 */}
+              {sortedRecords.length >= 5 && profile.goalWeight && currentWeight > profile.goalWeight && (() => {
+                // 直近7件の平均変化速度
+                const recent = sortedRecords.slice(-7);
+                const dailyChange = recent.length >= 2
+                  ? (recent[recent.length - 1].weight - recent[0].weight) / (recent.length - 1)
+                  : 0;
+                if (dailyChange >= 0) return (
+                  <p className="text-xs text-gray-400 mt-1">📉 減量ペースが止まっています</p>
+                );
+                const daysNeeded = Math.ceil((currentWeight - profile.goalWeight) / Math.abs(dailyChange));
+                const achieveDate = new Date();
+                achieveDate.setDate(achieveDate.getDate() + daysNeeded);
+                const label = achieveDate.toLocaleDateString("ja-JP", { month: "long", day: "numeric" });
+                return (
+                  <p className="text-xs text-teal-600 font-black mt-1">
+                    🎯 このペースなら <span className="text-orange-500">{label}</span> 達成予定
+                  </p>
+                );
+              })()}
             </div>
           </div>
         </div>
+
+        {/* カロリー収支カード */}
+        {showMealExercise && (() => {
+          const todayMeal = getAllMeals().find((m) => m.date === today());
+          const todayExercise = getAllExercises().find((e) => e.date === today());
+          const intake = todayMeal ? todayMeal.breakfast + todayMeal.lunch + todayMeal.dinner + todayMeal.snack : 0;
+          const exerciseBurned = todayExercise ? todayExercise.entries.reduce((s, e) => s + e.calories, 0) : 0;
+          const bmr = (age && profile.gender) ? calcBMR(currentWeight, profile.height, age, profile.gender) : 0;
+          if (bmr === 0) return null;
+          const totalBurned = bmr + exerciseBurned;
+          const balance = totalBurned - intake;
+          const maxVal = Math.max(totalBurned, intake, 1);
+          const burnedPct = Math.min(100, (totalBurned / maxVal) * 100);
+          const intakePct = Math.min(100, (intake / maxVal) * 100);
+          const isDeficit = balance >= 0;
+          const balanceLabel = isDeficit
+            ? `${balance.toLocaleString()} kcal のマイナス 🎉`
+            : `${Math.abs(balance).toLocaleString()} kcal オーバー ⚠️`;
+          const monthlyKg = ((Math.abs(balance) * 30) / 7200).toFixed(1);
+          const monthlyMsg = isDeficit
+            ? `このペースなら月に約 ${monthlyKg}kg 減`
+            : `このペースなら月に約 ${monthlyKg}kg 増`;
+          return (
+            <div className="bg-white rounded-2xl shadow-lg p-4">
+              <p className="text-sm font-black text-gray-700 mb-3">🔥 今日のカロリー収支</p>
+              {/* 消費バー */}
+              <div className="mb-2">
+                <div className="flex justify-between items-center text-xs text-gray-500 mb-1">
+                  <span>消費 <span className="text-gray-400 text-[10px]">基礎{bmr.toLocaleString()} + 運動{exerciseBurned.toLocaleString()}</span></span>
+                  <span className="font-black text-teal-600">{totalBurned.toLocaleString()} kcal</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-4">
+                  <div className="h-4 rounded-full bg-gradient-to-r from-teal-400 to-teal-600 transition-all duration-700" style={{ width: `${burnedPct}%` }} />
+                </div>
+              </div>
+              {/* 摂取バー */}
+              <div className="mb-3">
+                <div className="flex justify-between items-center text-xs text-gray-500 mb-1">
+                  <span>摂取</span>
+                  <span className={`font-black ${intake > 0 ? "text-orange-500" : "text-gray-300"}`}>
+                    {intake > 0 ? `${intake.toLocaleString()} kcal` : "未記録"}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-4">
+                  <div className="h-4 rounded-full bg-gradient-to-r from-orange-300 to-orange-500 transition-all duration-700" style={{ width: intake > 0 ? `${intakePct}%` : "0%" }} />
+                </div>
+              </div>
+              {/* 収支結果 */}
+              {intake > 0 ? (
+                <div className={`rounded-xl px-4 py-2.5 text-center ${isDeficit ? "bg-teal-50" : "bg-red-50"}`}>
+                  <p className={`text-sm font-black ${isDeficit ? "text-teal-600" : "text-red-500"}`}>{balanceLabel}</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">{monthlyMsg}</p>
+                </div>
+              ) : (
+                <div className="bg-gray-50 rounded-xl px-4 py-2.5 text-center">
+                  <p className="text-xs text-gray-400">食事を記録すると収支が表示されます</p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* BMI */}
         {/* 現在体重が痩せすぎの時、こたろうの心配メッセージ */}
@@ -396,7 +544,6 @@ export default function HomePage() {
         )}
 
         {displayBmi !== null && <BMICard bmi={displayBmi} height={profile.height} currentWeight={currentWeight} age={age} gender={profile.gender} />}
-
 
         {/* フッターロゴ */}
         <div className="flex justify-center pt-5 pb-3">

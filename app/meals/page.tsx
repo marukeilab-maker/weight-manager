@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { X, ChevronLeft, ChevronRight, ClipboardList } from "lucide-react";
-import { getMealRecord, saveMealRecord, getProfile } from "@/lib/storage";
-import { today, addDays } from "@/lib/calculations";
+import { getMealRecord, saveMealRecord, getProfile, getWeightRecords, getAllExercises } from "@/lib/storage";
+import { today, addDays, calcBMR, calcAge } from "@/lib/calculations";
 import { searchFoods, FoodItem } from "@/lib/foodDatabase";
 import { MealRecord } from "@/lib/types";
 
@@ -360,6 +360,64 @@ export default function MealsPage() {
       </div>
 
       <div className="px-4 mt-4 space-y-4">
+
+        {/* ── カロリー収支カード（今日のみ表示） ── */}
+        {date === today() && (() => {
+          const profile = getProfile();
+          if (!profile) return null;
+          const records = getWeightRecords();
+          const currentWeight = records.length > 0 ? records[records.length - 1].weight : 0;
+          if (!currentWeight || !profile.height || !profile.birthdate || !profile.gender) return null;
+          const age = calcAge(profile.birthdate);
+          const bmr = calcBMR(currentWeight, profile.height, age, profile.gender);
+          const exercises = getAllExercises();
+          const todayExercise = exercises.find((e) => e.date === today());
+          const exerciseBurned = todayExercise ? todayExercise.entries.reduce((s, e) => s + e.calories, 0) : 0;
+          const totalBurned = bmr + exerciseBurned;
+          const balance = totalBurned - totalAll;
+          const isDeficit = balance >= 0;
+          const maxVal = Math.max(totalBurned, totalAll, 1);
+          const burnedPct = Math.min(100, (totalBurned / maxVal) * 100);
+          const intakePct = Math.min(100, (totalAll / maxVal) * 100);
+          return (
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <p className="text-xs font-black text-gray-400 mb-3">カロリー収支</p>
+              <div className="space-y-2 mb-3">
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-gray-500 mb-1">
+                    <span>🔥 消費（基礎代謝{exerciseBurned > 0 ? ` + 運動` : ""}）</span>
+                    <span className="text-teal-600">{Math.round(totalBurned)} kcal</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2.5">
+                    <div className="h-2.5 rounded-full bg-gradient-to-r from-teal-400 to-teal-600 transition-all duration-500"
+                      style={{ width: `${burnedPct}%` }} />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-gray-500 mb-1">
+                    <span>🍽️ 摂取（食事）</span>
+                    <span className="text-orange-500">{totalAll} kcal</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2.5">
+                    <div className={`h-2.5 rounded-full transition-all duration-500 ${isDeficit ? "bg-gradient-to-r from-orange-300 to-orange-400" : "bg-gradient-to-r from-orange-400 to-red-500"}`}
+                      style={{ width: `${intakePct}%` }} />
+                  </div>
+                </div>
+              </div>
+              <div className={`rounded-xl px-3 py-2 flex items-center justify-between ${isDeficit ? "bg-teal-50" : "bg-red-50"}`}>
+                <span className={`text-xs font-black ${isDeficit ? "text-teal-600" : "text-red-500"}`}>
+                  {isDeficit ? "✅ 収支" : "⚠️ 収支"}
+                </span>
+                <span className={`text-sm font-black ${isDeficit ? "text-teal-600" : "text-red-500"}`}>
+                  {isDeficit ? `−${Math.round(balance)} kcal` : `+${Math.round(Math.abs(balance))} kcal オーバー`}
+                </span>
+              </div>
+              {exerciseBurned > 0 && (
+                <p className="text-[10px] text-gray-400 text-center mt-2">運動消費 {Math.round(exerciseBurned)} kcal 含む</p>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ── 食事スロット選択 ── */}
         <div className="grid grid-cols-4 gap-2">

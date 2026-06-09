@@ -2,10 +2,9 @@
 import { useState, useEffect } from "react";
 import { Trash2, TrendingDown, TrendingUp, Minus, Pencil, Check, X, Plus } from "lucide-react";
 import WeightChart from "@/components/WeightChart";
-import { getWeightRecords, saveWeightRecord, deleteWeightRecord } from "@/lib/storage";
+import { getWeightRecords, saveWeightRecord, deleteWeightRecord, getAllMeals, getProfile } from "@/lib/storage";
 import { WeightRecord } from "@/lib/types";
-import { getProfile } from "@/lib/storage";
-import { calcBMI, today } from "@/lib/calculations";
+import { calcBMI, today, addDays } from "@/lib/calculations";
 
 export default function RecordsPage() {
   const [records, setRecords] = useState<WeightRecord[]>([]);
@@ -104,6 +103,132 @@ export default function RecordsPage() {
 
       <div className="px-4 mt-4 space-y-4">
         <WeightChart records={allRecords} goalWeight={goalWeight} showCaloriesOption={showMealExercise} />
+
+        {/* 月間サマリー + 食事パターン分析 */}
+        {(() => {
+          const meals = getAllMeals();
+          if (meals.length === 0 || allRecords.length === 0) return null;
+
+          // 過去30日の範囲
+          const d30ago = addDays(today(), -30);
+          const recentRecords = allRecords.filter(r => r.date >= d30ago);
+          const recentMeals = meals.filter(m => m.date >= d30ago);
+
+          if (recentRecords.length < 3) return null;
+
+          // 月間体重変化
+          const sorted30 = [...recentRecords].sort((a, b) => a.date.localeCompare(b.date));
+          const monthDiff = sorted30.length >= 2
+            ? Math.round((sorted30[sorted30.length - 1].weight - sorted30[0].weight) * 10) / 10
+            : null;
+
+          // 平均摂取カロリー（食事記録がある日）
+          const mealDays = recentMeals.filter(m => m.breakfast + m.lunch + m.dinner + m.snack > 0);
+          const avgCalories = mealDays.length > 0
+            ? Math.round(mealDays.reduce((s, m) => s + m.breakfast + m.lunch + m.dinner + m.snack, 0) / mealDays.length)
+            : 0;
+
+          // 食事パターン分析
+          const skipBreakfast = recentMeals.filter(m => m.breakfast === 0).length;
+          const skipLunch = recentMeals.filter(m => m.lunch === 0).length;
+          const skipDinner = recentMeals.filter(m => m.dinner === 0).length;
+          const withSnack = recentMeals.filter(m => m.snack > 0).length;
+          const total = recentMeals.length || 1;
+
+          // 曜日別平均カロリー（どの曜日が一番多いか）
+          const dayTotals: number[] = [0, 0, 0, 0, 0, 0, 0];
+          const dayCounts: number[] = [0, 0, 0, 0, 0, 0, 0];
+          recentMeals.forEach(m => {
+            const kcal = m.breakfast + m.lunch + m.dinner + m.snack;
+            if (kcal > 0) {
+              const dow = new Date(m.date + "T00:00:00").getDay();
+              dayTotals[dow] += kcal;
+              dayCounts[dow]++;
+            }
+          });
+          const dayAvgs = dayTotals.map((t, i) => dayCounts[i] > 0 ? Math.round(t / dayCounts[i]) : 0);
+          const maxDow = dayAvgs.indexOf(Math.max(...dayAvgs));
+          const dowNames = ["日", "月", "火", "水", "木", "金", "土"];
+          const maxDowKcal = dayAvgs[maxDow];
+
+          return (
+            <div className="space-y-3">
+              {/* 月間サマリー */}
+              <div className="bg-white rounded-2xl shadow-lg p-4">
+                <p className="text-xs font-black text-gray-400 mb-3">📅 過去30日のまとめ</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-gray-50 rounded-xl py-3 text-center">
+                    <p className="text-[10px] text-gray-400 mb-1">記録日数</p>
+                    <p className="text-xl font-black text-gray-800">{recentRecords.length}<span className="text-xs font-normal text-gray-400">日</span></p>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl py-3 text-center">
+                    <p className="text-[10px] text-gray-400 mb-1">体重変化</p>
+                    <p className={`text-xl font-black ${monthDiff === null ? "text-gray-400" : monthDiff < 0 ? "text-teal-600" : monthDiff > 0 ? "text-red-400" : "text-gray-500"}`}>
+                      {monthDiff === null ? "−" : monthDiff > 0 ? `+${monthDiff}` : monthDiff}
+                      {monthDiff !== null && <span className="text-xs font-normal text-gray-400">kg</span>}
+                    </p>
+                  </div>
+                  {showMealExercise && (
+                    <div className="bg-gray-50 rounded-xl py-3 text-center">
+                      <p className="text-[10px] text-gray-400 mb-1">平均摂取</p>
+                      <p className="text-xl font-black text-orange-500">
+                        {avgCalories > 0 ? avgCalories : "−"}
+                        {avgCalories > 0 && <span className="text-xs font-normal text-gray-400">kcal</span>}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 食事パターン分析 */}
+              {showMealExercise && recentMeals.length >= 5 && (
+                <div className="bg-white rounded-2xl shadow-lg p-4">
+                  <p className="text-xs font-black text-gray-400 mb-3">🔍 食事パターン分析</p>
+                  <div className="space-y-3">
+                    {/* 食事スキップ率 */}
+                    <div>
+                      <p className="text-xs font-bold text-gray-600 mb-2">食事スキップ率（過去30日）</p>
+                      {[
+                        { label: "🌅 朝食", skip: skipBreakfast, icon: "amber" },
+                        { label: "☀️ 昼食", skip: skipLunch, icon: "orange" },
+                        { label: "🌙 夕食", skip: skipDinner, icon: "indigo" },
+                      ].map(({ label, skip }) => {
+                        const pct = Math.round((skip / total) * 100);
+                        return (
+                          <div key={label} className="flex items-center gap-2 mb-1.5">
+                            <span className="text-xs text-gray-500 w-14 shrink-0">{label}</span>
+                            <div className="flex-1 bg-gray-100 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full ${pct > 50 ? "bg-red-400" : pct > 20 ? "bg-amber-400" : "bg-teal-400"}`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className={`text-xs font-black w-8 text-right ${pct > 50 ? "text-red-500" : pct > 20 ? "text-amber-500" : "text-teal-500"}`}>{pct}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="border-t border-gray-50 pt-3 space-y-2">
+                      {/* 間食傾向 */}
+                      <div className="flex items-center justify-between bg-pink-50 rounded-xl px-3 py-2">
+                        <span className="text-xs font-bold text-gray-600">🍪 間食した日</span>
+                        <span className="text-sm font-black text-pink-500">{Math.round((withSnack / total) * 100)}%</span>
+                      </div>
+                      {/* 最もカロリーが多い曜日 */}
+                      {maxDowKcal > 0 && (
+                        <div className="flex items-center justify-between bg-orange-50 rounded-xl px-3 py-2">
+                          <span className="text-xs font-bold text-gray-600">📈 摂取が多い曜日</span>
+                          <span className="text-sm font-black text-orange-500">{dowNames[maxDow]}曜日 <span className="text-xs font-normal text-gray-400">avg {maxDowKcal}kcal</span></span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* 過去の体重を追加 */}
         <div className="bg-white rounded-2xl shadow-lg p-4">

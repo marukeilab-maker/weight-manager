@@ -152,7 +152,7 @@ export default function WeightChart({ records, goalWeight, showCaloriesOption = 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-bold text-gray-700">体重 & カロリー収支</h3>
+        <h3 className="font-bold text-gray-700">{canShowCalories ? "体重 & カロリー収支" : "体重グラフ"}</h3>
         <div className="flex gap-1">
           {(["week", "month", "all"] as Range[]).map((r) => (
             <button

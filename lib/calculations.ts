@@ -4,8 +4,8 @@ export function calcBMI(weight: number, height: number): number {
 }
 
 export function daysBetween(from: string, to: string): number {
-  const a = new Date(from);
-  const b = new Date(to);
+  const a = new Date(from + "T00:00:00");
+  const b = new Date(to + "T00:00:00");
   return Math.round((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
 }
 
@@ -18,7 +18,7 @@ export function today(): string {
 }
 
 export function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
+  const d = new Date(dateStr + "T00:00:00");
   return `${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
