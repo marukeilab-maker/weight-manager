@@ -151,3 +151,117 @@ git push origin main
 - 記録: 食事パターン分析・月間サマリーの平均摂取カロリー列
 - グラフ: タイトルを「体重グラフ」に変更（通常は「体重 & カロリー収支」）
 - BottomNav: 食事・運動タブ
+
+設定変更をページをまたいで即時反映させるには、localStorage書き込み後に必ず以下を実行する：
+```typescript
+window.dispatchEvent(new Event("wm_settings_changed"));
+```
+BottomNav・RecordsPage・HomePageがこのイベントをリッスンして再描画する。
+
+---
+
+## ⚠️ 日付処理の注意点
+
+**`new Date("YYYY-MM-DD")` はタイムゾーンのずれで前日になる場合がある。**  
+必ず末尾に `T00:00:00` をつけてローカル時刻として解釈させること。
+
+```typescript
+// ❌ 危険（UTCで解釈される → 日本では前日になることがある）
+new Date("2025-06-09")
+
+// ✅ 安全（ローカル時刻で解釈される）
+new Date("2025-06-09T00:00:00")
+```
+
+`addDays()` や `today()` など `lib/calculations.ts` の関数は全てこの形式で統一済み。  
+新しく日付処理を書く時も必ず `T00:00:00` をつけること。
+
+---
+
+## バージョン管理
+
+バージョンは2箇所で管理されており、両方を同時に更新すること：
+
+```
+lib/version.ts    → APP_VERSION = "x.x.x"
+package.json      → "version": "x.x.x"
+```
+
+設定ページのアプリ情報欄に `APP_VERSION` が表示される。
+
+---
+
+## バックアップ対象キーの管理
+
+バックアップ・インポートの対象キーは `lib/constants.ts` の `BACKUP_KEYS` で一元管理している。  
+新しいデータをlocalStorageに追加した場合は `BACKUP_KEYS` に追記すること。
+
+```typescript
+export const BACKUP_KEYS = [
+  "wm_profile",
+  "wm_records",
+  "wm_meals",
+  "wm_exercises",
+  "wm_meal_dishes",
+] as const;
+```
+
+---
+
+## iOS / Capacitor ビルド
+
+**App情報**:
+- App ID: `com.marukeilab.kotarodiet`
+- App名: `こたろうダイエット`
+- Xcodeプロジェクト: `ios/App/App.xcodeproj`
+
+**Capacitorビルド手順**（Vercelとは独立して行う）:
+```bash
+# 1. next.config.ts に一時的に output: "export" を追加
+# 2. ビルド
+npm run build
+# 3. iOSに同期
+npx cap sync ios
+# 4. Xcodeで開く
+npx cap open ios
+# 5. ビルド後、next.config.ts から output: "export" を必ず削除して戻す
+# 6. vercel deploy --prod で再デプロイ（Vercel側を壊したままにしない）
+```
+
+**アイコン元ファイル**: `public/` にあるダンベルを持った猫の画像  
+生成コマンド: `sips -z <size> <size> source.png --out dest.png`
+
+---
+
+## MET値（運動強度）
+
+`lib/calculations.ts` の `MET_VALUES` で定義。新しい運動を追加する時はここに追記する。
+
+| 運動 | MET |
+|---|---|
+| ウォーキング | 3.5 |
+| 速歩 | 4.5 |
+| ランニング | 8.0 |
+| 水泳 | 8.0 |
+| サイクリング | 6.0 |
+| 筋トレ | 4.0 |
+| ストレッチ | 2.5 |
+| その他 | 3.0 |
+
+---
+
+## App Store 申請状況（2025年6月時点）
+
+- Apple Developer Program: 登録済み（12,980円/年）
+- App Store Connect: 未設定
+- スクリーンショット: 未作成
+- 審査提出: 未実施
+- 現状: PWA（Safari経由）としてのみ使用可能
+
+---
+
+## こたろうのメッセージ管理
+
+- **日替わりメッセージ**: `lib/catMessages.ts` — 今日の日付をシードに毎日変わる
+- **週次レポートメッセージ**: `lib/weeklyReport.ts` の `buildMessage()` — 体重変化・記録日数・運動日数に応じて自動生成
+- メッセージを追加・変更する場合はそれぞれのファイルを編集する
