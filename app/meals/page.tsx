@@ -146,13 +146,11 @@ export default function MealsPage() {
     setSearchResults([]);
   }
 
-  // カスタム料理を追加
+  // カスタム料理を追加（記録に追加するだけ。お気に入り保存は記録一覧の★で行う）
   function addCustomDish() {
     if (!customKcal || Number(customKcal) <= 0) return;
     const dish: Dish = { name: customName.trim() || "カスタム料理", kcal: Number(customKcal) };
     addDish(dish);
-    saveToCustomHistory(dish);
-    setCustomHistory(loadCustomHistory());
     setCustomName("");
     setCustomKcal("");
   }
