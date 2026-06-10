@@ -203,7 +203,23 @@ export default function HomePage() {
         </div>
         <h1 className="text-white text-lg font-black mb-4">今日の体重を記録</h1>
 
-        <div className="bg-white/20 backdrop-blur rounded-2xl p-5">
+        <div className="bg-white/20 backdrop-blur rounded-2xl p-5 relative overflow-hidden">
+          {/* 記録完了の紙吹雪 */}
+          {saved && (
+            <div className="absolute inset-0 pointer-events-none z-10">
+              {Array.from({ length: 24 }).map((_, i) => (
+                <span
+                  key={i}
+                  className="confetti-piece"
+                  style={{
+                    left: `${(i * 37 + 13) % 100}%`,
+                    background: ["#fbbf24", "#f472b6", "#34d399", "#60a5fa", "#fb923c", "#a78bfa"][i % 6],
+                    animationDelay: `${(i % 8) * 0.09}s`,
+                  }}
+                />
+              ))}
+            </div>
+          )}
           {/* 記録済みの場合のみ右上に差分表示（未記録時はB表示を使う） */}
           {diff !== null && todayRecord && (
             <div className={`flex items-center justify-end gap-1 mb-1 text-sm font-bold ${

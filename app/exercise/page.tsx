@@ -111,8 +111,8 @@ export default function ExercisePage() {
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-white text-2xl font-black">運動記録 🏃</h1>
           <div className="flex items-center gap-1">
-            <button onClick={() => changeDate(addDays(date, -1))} className="bg-white/20 text-white rounded-lg p-1.5 active:bg-white/40 transition-colors">
-              <ChevronLeft size={16} />
+            <button onClick={() => changeDate(addDays(date, -1))} className="bg-white/20 text-white rounded-lg p-3 active:bg-white/40 transition-colors">
+              <ChevronLeft size={18} />
             </button>
             <label className="relative cursor-pointer">
               <span className="bg-white/20 text-white rounded-xl px-3 py-1.5 text-sm font-bold block select-none">
@@ -129,8 +129,8 @@ export default function ExercisePage() {
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
             </label>
-            <button onClick={() => changeDate(addDays(date, 1))} className="bg-white/20 text-white rounded-lg p-1.5 active:bg-white/40 transition-colors">
-              <ChevronRight size={16} />
+            <button onClick={() => changeDate(addDays(date, 1))} className="bg-white/20 text-white rounded-lg p-3 active:bg-white/40 transition-colors">
+              <ChevronRight size={18} />
             </button>
           </div>
         </div>

@@ -10,6 +10,7 @@ export default function RecordsPage() {
   const [records, setRecords] = useState<WeightRecord[]>([]);
   const [height, setHeight] = useState(170);
   const [goalWeight, setGoalWeight] = useState<number | undefined>(undefined);
+  const [targetCalories, setTargetCalories] = useState<number>(0);
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [editDateValue, setEditDateValue] = useState("");
@@ -22,7 +23,7 @@ export default function RecordsPage() {
   const reload = () => {
     setRecords(getWeightRecords().slice().reverse());
     const p = getProfile();
-    if (p) { setHeight(p.height); setGoalWeight(p.goalWeight); }
+    if (p) { setHeight(p.height); setGoalWeight(p.goalWeight); setTargetCalories(p.targetCalories ?? 0); }
   };
 
   useEffect(() => {
@@ -128,12 +129,22 @@ export default function RecordsPage() {
             ? Math.round(mealDays.reduce((s, m) => s + m.breakfast + m.lunch + m.dinner + m.snack, 0) / mealDays.length)
             : 0;
 
-          // 食事パターン分析
-          const skipBreakfast = recentMeals.filter(m => m.breakfast === 0).length;
-          const skipLunch = recentMeals.filter(m => m.lunch === 0).length;
-          const skipDinner = recentMeals.filter(m => m.dinner === 0).length;
-          const withSnack = recentMeals.filter(m => m.snack > 0).length;
-          const total = recentMeals.length || 1;
+          // 食事バランス分析（記録のある日のみ）
+          const mealWithData = recentMeals.filter(m => m.breakfast + m.lunch + m.dinner + m.snack > 0);
+          const mealTotal = mealWithData.length || 1;
+          const avgBreakfast = Math.round(mealWithData.reduce((s, m) => s + m.breakfast, 0) / mealTotal);
+          const avgLunch     = Math.round(mealWithData.reduce((s, m) => s + m.lunch,     0) / mealTotal);
+          const avgDinner    = Math.round(mealWithData.reduce((s, m) => s + m.dinner,    0) / mealTotal);
+          const avgSnack     = Math.round(mealWithData.reduce((s, m) => s + m.snack,     0) / mealTotal);
+          const avgTotal = avgBreakfast + avgLunch + avgDinner + avgSnack || 1;
+
+          // 目標カロリー達成率（記録のある日のうち、目標以内に収まった日数）
+          const achievedDays = targetCalories > 0
+            ? mealWithData.filter(m => (m.breakfast + m.lunch + m.dinner + m.snack) <= targetCalories).length
+            : 0;
+          const achieveRate = mealWithData.length > 0
+            ? Math.round((achievedDays / mealWithData.length) * 100)
+            : 0;
 
           // 曜日別平均カロリー（どの曜日が一番多いか）
           const dayTotals: number[] = [0, 0, 0, 0, 0, 0, 0];
@@ -180,48 +191,79 @@ export default function RecordsPage() {
                 </div>
               </div>
 
-              {/* 食事パターン分析 */}
-              {showMealExercise && recentMeals.length >= 5 && (
+              {/* 食事バランス分析 */}
+              {showMealExercise && mealWithData.length >= 5 && (
                 <div className="bg-white rounded-2xl shadow-lg p-4">
-                  <p className="text-xs font-black text-gray-400 mb-3">🔍 食事パターン分析</p>
-                  <div className="space-y-3">
-                    {/* 食事スキップ率 */}
-                    <div>
-                      <p className="text-xs font-bold text-gray-600 mb-2">食事スキップ率（過去30日）</p>
-                      {[
-                        { label: "🌅 朝食", skip: skipBreakfast, icon: "amber" },
-                        { label: "☀️ 昼食", skip: skipLunch, icon: "orange" },
-                        { label: "🌙 夕食", skip: skipDinner, icon: "indigo" },
-                      ].map(({ label, skip }) => {
-                        const pct = Math.round((skip / total) * 100);
-                        return (
-                          <div key={label} className="flex items-center gap-2 mb-1.5">
-                            <span className="text-xs text-gray-500 w-14 shrink-0">{label}</span>
-                            <div className="flex-1 bg-gray-100 rounded-full h-2">
-                              <div
-                                className={`h-2 rounded-full ${pct > 50 ? "bg-red-400" : pct > 20 ? "bg-amber-400" : "bg-teal-400"}`}
-                                style={{ width: `${pct}%` }}
-                              />
+                  <p className="text-xs font-black text-gray-400 mb-1">🍽️ 食事バランス分析</p>
+                  <p className="text-[10px] text-gray-400 mb-3">過去30日の平均カロリー内訳</p>
+                  <div className="space-y-2.5">
+                    {[
+                      { label: "🌅 朝食", avg: avgBreakfast, grad: "from-amber-300 to-orange-400" },
+                      { label: "☀️ 昼食", avg: avgLunch,     grad: "from-orange-400 to-rose-400" },
+                      { label: "🌙 夕食", avg: avgDinner,    grad: "from-indigo-400 to-purple-500" },
+                      { label: "🍪 間食", avg: avgSnack,     grad: "from-rose-300 to-pink-400" },
+                    ].map(({ label, avg, grad }) => {
+                      const pct = Math.round((avg / avgTotal) * 100);
+                      return (
+                        <div key={label}>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-bold text-gray-600">{label}</span>
+                            <div className="text-right">
+                              <span className="text-xs font-black text-gray-700">{avg > 0 ? `${avg} kcal` : "−"}</span>
+                              {avg > 0 && <span className="text-[10px] text-gray-400 ml-1">({pct}%)</span>}
                             </div>
-                            <span className={`text-xs font-black w-8 text-right ${pct > 50 ? "text-red-500" : pct > 20 ? "text-amber-500" : "text-teal-500"}`}>{pct}%</span>
                           </div>
-                        );
-                      })}
-                    </div>
-
-                    <div className="border-t border-gray-50 pt-3 space-y-2">
-                      {/* 間食傾向 */}
-                      <div className="flex items-center justify-between bg-pink-50 rounded-xl px-3 py-2">
-                        <span className="text-xs font-bold text-gray-600">🍪 間食した日</span>
-                        <span className="text-sm font-black text-pink-500">{Math.round((withSnack / total) * 100)}%</span>
-                      </div>
-                      {/* 最もカロリーが多い曜日 */}
-                      {maxDowKcal > 0 && (
-                        <div className="flex items-center justify-between bg-orange-50 rounded-xl px-3 py-2">
-                          <span className="text-xs font-bold text-gray-600">📈 摂取が多い曜日</span>
-                          <span className="text-sm font-black text-orange-500">{dowNames[maxDow]}曜日 <span className="text-xs font-normal text-gray-400">avg {maxDowKcal}kcal</span></span>
+                          <div className="w-full bg-gray-100 rounded-full h-3">
+                            <div
+                              className={`h-3 rounded-full bg-gradient-to-r ${grad} transition-all duration-700`}
+                              style={{ width: avg > 0 ? `${pct}%` : "0%" }}
+                            />
+                          </div>
                         </div>
-                      )}
+                      );
+                    })}
+                  </div>
+                  {/* 最もカロリーが多い曜日 */}
+                  {maxDowKcal > 0 && (
+                    <div className="flex items-center justify-between bg-orange-50 rounded-xl px-3 py-2 mt-3">
+                      <span className="text-xs font-bold text-gray-600">📈 摂取が多い曜日</span>
+                      <span className="text-sm font-black text-orange-500">{dowNames[maxDow]}曜日 <span className="text-xs font-normal text-gray-400">avg {maxDowKcal}kcal</span></span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 目標カロリー達成率 */}
+              {showMealExercise && targetCalories > 0 && mealWithData.length >= 5 && (
+                <div className="bg-white rounded-2xl shadow-lg p-4">
+                  <p className="text-xs font-black text-gray-400 mb-1">🎯 目標カロリー達成率</p>
+                  <p className="text-[10px] text-gray-400 mb-3">記録した日のうち、目標 {targetCalories.toLocaleString()}kcal 以内に収まった割合</p>
+                  <div className="flex items-center gap-4">
+                    {/* 円形ゲージ */}
+                    <div className="relative w-20 h-20 shrink-0">
+                      <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+                        <circle cx="40" cy="40" r="34" fill="none" stroke="#f3f4f6" strokeWidth="8" />
+                        <circle
+                          cx="40" cy="40" r="34" fill="none"
+                          stroke={achieveRate >= 70 ? "#14b8a6" : achieveRate >= 40 ? "#f59e0b" : "#ef4444"}
+                          strokeWidth="8" strokeLinecap="round"
+                          strokeDasharray={`${(achieveRate / 100) * 213.6} 213.6`}
+                          className="transition-all duration-700"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className={`text-xl font-black ${achieveRate >= 70 ? "text-teal-600" : achieveRate >= 40 ? "text-amber-500" : "text-red-500"}`}>{achieveRate}%</span>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-black text-gray-700 mb-1">
+                        {mealWithData.length}日中 <span className={achieveRate >= 70 ? "text-teal-600" : achieveRate >= 40 ? "text-amber-500" : "text-red-500"}>{achievedDays}日</span> 達成
+                      </p>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        {achieveRate >= 70 ? "素晴らしいペース！この調子で続けよう✨"
+                          : achieveRate >= 40 ? "もう一息！あと少しで習慣になるよ💪"
+                          : "焦らず一日ずつ。記録できてるだけで前進🌱"}
+                      </p>
                     </div>
                   </div>
                 </div>

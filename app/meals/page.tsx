@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { X, ChevronLeft, ChevronRight, ClipboardList } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, ClipboardList, Star } from "lucide-react";
 import { getMealRecord, saveMealRecord, getProfile, getWeightRecords, getAllExercises } from "@/lib/storage";
 import { today, addDays, calcBMR, calcAge } from "@/lib/calculations";
 import { searchFoods, FoodItem } from "@/lib/foodDatabase";
@@ -79,6 +79,7 @@ export default function MealsPage() {
   const [customHistory, setCustomHistory] = useState<Dish[]>([]);
   const [targetCalories, setTargetCalories] = useState<number>(0);
   const [showAllHistory, setShowAllHistory] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const isAutoDateRef = useRef(true);  // 自動日付モード（手動変更後はfalseに）
 
   // 手動で日付を変更（自動更新を停止）
@@ -93,6 +94,7 @@ export default function MealsPage() {
   }, [date]);
 
   useEffect(() => {
+    setMounted(true);
     setCustomHistory(loadCustomHistory());
     const p = getProfile();
     if (p) setTargetCalories(p.targetCalories);
@@ -158,6 +160,19 @@ export default function MealsPage() {
   // 履歴から削除
   function deleteFromHistory(name: string) {
     removeFromCustomHistory(name);
+    setCustomHistory(loadCustomHistory());
+  }
+
+  // お気に入り（よく使う料理）の登録・解除
+  function isFavorite(name: string): boolean {
+    return customHistory.some((d) => d.name === name);
+  }
+  function toggleFavorite(dish: Dish) {
+    if (isFavorite(dish.name)) {
+      removeFromCustomHistory(dish.name);
+    } else {
+      saveToCustomHistory(dish);
+    }
     setCustomHistory(loadCustomHistory());
   }
 
@@ -311,8 +326,8 @@ export default function MealsPage() {
             </button>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => changeDate(addDays(date, -1))} className="bg-white/20 text-white rounded-lg p-1.5 active:bg-white/40 transition-colors">
-              <ChevronLeft size={16} />
+            <button onClick={() => changeDate(addDays(date, -1))} className="bg-white/20 text-white rounded-lg p-3 active:bg-white/40 transition-colors">
+              <ChevronLeft size={18} />
             </button>
             <label className="relative cursor-pointer">
               <span className="bg-white/20 text-white rounded-xl px-3 py-1.5 text-sm font-bold block select-none">
@@ -328,8 +343,8 @@ export default function MealsPage() {
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
             </label>
-            <button onClick={() => changeDate(addDays(date, 1))} className="bg-white/20 text-white rounded-lg p-1.5 active:bg-white/40 transition-colors">
-              <ChevronRight size={16} />
+            <button onClick={() => changeDate(addDays(date, 1))} className="bg-white/20 text-white rounded-lg p-3 active:bg-white/40 transition-colors">
+              <ChevronRight size={18} />
             </button>
           </div>
         </div>
@@ -362,7 +377,7 @@ export default function MealsPage() {
       <div className="px-4 mt-4 space-y-4">
 
         {/* ── カロリー収支カード（今日のみ表示） ── */}
-        {date === today() && (() => {
+        {mounted && date === today() && (() => {
           const profile = getProfile();
           if (!profile) return null;
           const records = getWeightRecords();
@@ -528,23 +543,38 @@ export default function MealsPage() {
           {searchResults.length > 0 && (
             <div className="border border-gray-100 rounded-xl overflow-hidden">
               {searchResults.map((item, i) => (
-                <button
+                <div
                   key={i}
-                  onClick={() => addFromSearch(item)}
-                  className={`w-full flex items-center px-3 py-2.5 border-b border-gray-50 last:border-0 transition-colors text-left ${
-                    flashDish === item.name ? "bg-green-50" : "hover:bg-orange-50 active:bg-orange-100"
+                  className={`flex items-center border-b border-gray-50 last:border-0 transition-colors ${
+                    flashDish === item.name ? "bg-green-50" : "hover:bg-orange-50"
                   }`}
                 >
-                  <div className="flex-1">
-                    <span className="text-sm font-bold text-gray-800">{item.name}</span>
-                    <span className="text-[10px] text-gray-400 ml-2">{item.category}</span>
-                  </div>
-                  {flashDish === item.name
-                    ? <span className="text-green-500 font-black text-sm">✓ 追加</span>
-                    : <><span className="text-orange-500 font-black text-sm mr-1">{item.kcal}</span>
-                       <span className="text-gray-400 text-xs">kcal</span></>
-                  }
-                </button>
+                  <button
+                    onClick={() => addFromSearch(item)}
+                    className="flex-1 flex items-center px-3 py-2.5 text-left active:bg-orange-100 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <span className="text-sm font-bold text-gray-800">{item.name}</span>
+                      <span className="text-[10px] text-gray-400 ml-2">{item.category}</span>
+                    </div>
+                    {flashDish === item.name
+                      ? <span className="text-green-500 font-black text-sm">✓ 追加</span>
+                      : <><span className="text-orange-500 font-black text-sm mr-1">{item.kcal}</span>
+                         <span className="text-gray-400 text-xs">kcal</span></>
+                    }
+                  </button>
+                  <button
+                    onClick={() => toggleFavorite({ name: item.name, kcal: item.kcal })}
+                    className="p-2.5 transition-colors"
+                    aria-label="お気に入り"
+                  >
+                    <Star
+                      size={16}
+                      className={isFavorite(item.name) ? "text-amber-400" : "text-gray-300"}
+                      fill={isFavorite(item.name) ? "currentColor" : "none"}
+                    />
+                  </button>
+                </div>
               ))}
             </div>
           )}
@@ -595,7 +625,7 @@ export default function MealsPage() {
               )}
             </div>
           ) : (
-            <p className="text-xs text-gray-400 text-center py-4">まだ登録された料理がありません</p>
+            <p className="text-xs text-gray-400 text-center py-4">検索結果や記録した料理の ★ を押すと、ここに登録されます</p>
           )}
 
           {/* 区切り線＋追加フォーム */}
@@ -644,8 +674,21 @@ export default function MealsPage() {
                 <div className="flex-1">
                   <span className="text-sm font-bold text-gray-700">{dish.name}</span>
                 </div>
-                <span className="text-orange-500 font-bold text-sm mr-3">{dish.kcal} kcal</span>
-                <button onClick={() => removeDish(i)} className="text-gray-300 hover:text-red-400 transition-colors">
+                <span className="text-orange-500 font-bold text-sm mr-1">{dish.kcal} kcal</span>
+                {dish.name !== "食事抜き" && (
+                  <button
+                    onClick={() => toggleFavorite(dish)}
+                    className="p-1.5 transition-colors"
+                    aria-label="お気に入り"
+                  >
+                    <Star
+                      size={15}
+                      className={isFavorite(dish.name) ? "text-amber-400" : "text-gray-300"}
+                      fill={isFavorite(dish.name) ? "currentColor" : "none"}
+                    />
+                  </button>
+                )}
+                <button onClick={() => removeDish(i)} className="text-gray-300 hover:text-red-400 transition-colors p-1.5">
                   <X size={16} />
                 </button>
               </div>
