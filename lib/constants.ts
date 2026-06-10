@@ -13,4 +13,7 @@ export const BACKUP_KEYS = [
   "wm_meals",
   "wm_exercises",
   "wm_meal_dishes",
+  "wm_custom_food_history",
+  "wm_show_meal_exercise",
+  "wm_activity_level",
 ] as const;

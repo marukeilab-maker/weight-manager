@@ -23,8 +23,11 @@ import {
   formatDate,
   calcAge,
   calcBMR,
+  calcStreak,
+  addDays,
 } from "@/lib/calculations";
 import { getDailyCatMessage } from "@/lib/catMessages";
+import { BACKUP_KEYS } from "@/lib/constants";
 import { Profile, WeightRecord } from "@/lib/types";
 
 export default function HomePage() {
@@ -71,13 +74,11 @@ export default function HomePage() {
     }
     setBackupDismissed(localStorage.getItem("wm_backup_dismissed_" + today()) === "1");
     setShowMealExercise(localStorage.getItem("wm_show_meal_exercise") !== "false");
-    // 今週月曜日に既に閉じたかチェック
+    // 今週月曜日に既に閉じたかチェック（ローカルタイム基準）
     const thisMonday = (() => {
       const now = new Date();
       const dow = now.getDay();
-      const d = new Date(now);
-      d.setDate(now.getDate() - ((dow + 6) % 7));
-      return d.toISOString().slice(0, 10);
+      return addDays(today(), -((dow + 6) % 7));
     })();
     const dismissedKey = `wm_report_dismissed_${thisMonday}`;
     setReportDismissed(localStorage.getItem(dismissedKey) === "1");
@@ -117,11 +118,13 @@ export default function HomePage() {
   }
 
   function handleBackup() {
-    const BACKUP_KEYS = ["wm_profile", "wm_records", "wm_meals", "wm_exercises", "wm_meal_dishes"];
     const backup: Record<string, unknown> = {};
     BACKUP_KEYS.forEach((k) => {
       const v = localStorage.getItem(k);
-      if (v) backup[k] = JSON.parse(v);
+      // JSON以外の生文字列（例: wm_activity_level の "low"）もそのまま保存
+      if (v !== null) {
+        try { backup[k] = JSON.parse(v); } catch { backup[k] = v; }
+      }
     });
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -157,22 +160,8 @@ export default function HomePage() {
   const startBmi = startWeight > 0 ? calcBMI(startWeight, profile.height) : null;
   const age = profile.birthdate ? calcAge(profile.birthdate) : null;
 
-  // 連続記録日数（ストリーク）
-  const streak = (() => {
-    if (records.length === 0) return 0;
-    const dateSet = new Set(records.map((r) => r.date));
-    let count = 0;
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    // 今日の記録がなければ昨日から数える
-    if (!todayRecord) d.setDate(d.getDate() - 1);
-    while (true) {
-      const ds = d.toISOString().slice(0, 10);
-      if (dateSet.has(ds)) { count++; d.setDate(d.getDate() - 1); }
-      else break;
-    }
-    return count;
-  })();
+  // 連続記録日数（ストリーク）— タイムゾーン安全な calcStreak を使用
+  const streak = calcStreak(records.map((r) => r.date)).current;
 
   const isUnhealthyGoal =
     startWeight > 0 &&
@@ -334,11 +323,8 @@ export default function HomePage() {
               </p>
               <button
                 onClick={() => {
-                  const now = new Date();
-                  const dow = now.getDay();
-                  const d = new Date(now);
-                  d.setDate(now.getDate() - ((dow + 6) % 7));
-                  const thisMonday = d.toISOString().slice(0, 10);
+                  const dow = new Date().getDay();
+                  const thisMonday = addDays(today(), -((dow + 6) % 7));
                   localStorage.setItem(`wm_report_dismissed_${thisMonday}`, "1");
                   setReportDismissed(true);
                 }}

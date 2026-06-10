@@ -21,9 +21,12 @@ export interface WeeklyReport {
   summary: string;
 }
 
-/** YYYY-MM-DD を返す */
+/** YYYY-MM-DD を返す（ローカルタイム基準。toISOStringはUTCで日付がずれるため使わない） */
 function toDateStr(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 /** 先週の月曜〜日曜を返す */

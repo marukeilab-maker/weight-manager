@@ -50,7 +50,7 @@ export default function WeightChart({ records, goalWeight, showCaloriesOption = 
       // 全期間：最古の記録から今日まで
       if (records.length > 0) {
         const oldest = [...records].sort((a, b) => a.date.localeCompare(b.date))[0];
-        startDate = new Date(oldest.date);
+        startDate = new Date(oldest.date + "T00:00:00");
       }
     }
 

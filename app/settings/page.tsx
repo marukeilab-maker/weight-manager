@@ -5,7 +5,18 @@ import { Scale, Target, Calendar, Flame, CheckCircle, Download, Upload, Cake, Us
 import { getProfile, saveProfile, getWeightRecords, saveWeightRecord } from "@/lib/storage";
 import { today, calcBMR, calcAge, daysBetween, addDays, calcBMI } from "@/lib/calculations";
 import { APP_VERSION } from "@/lib/version";
+import { BACKUP_KEYS } from "@/lib/constants";
 import BirthdateSelect from "@/components/BirthdateSelect";
+
+// 1ヶ月後の日付（ローカルタイム基準。toISOStringはUTCで日付がずれるため使わない）
+function oneMonthLater(): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 // 活動レベル（TDEE係数）
 const ACTIVITY_LEVELS = [
@@ -34,14 +45,16 @@ export default function SettingsPage() {
   const [showMealExercise, setShowMealExercise] = useState(true);
   const importRef = useRef<HTMLInputElement>(null);
 
-  const BACKUP_KEYS = ["wm_profile", "wm_records", "wm_meals", "wm_exercises", "wm_meal_dishes"];
   const LAST_BACKUP_KEY = "wm_last_backup";
 
   function handleExport() {
     const backup: Record<string, unknown> = {};
     BACKUP_KEYS.forEach((k) => {
       const v = localStorage.getItem(k);
-      if (v) backup[k] = JSON.parse(v);
+      // JSON以外の生文字列（例: wm_activity_level の "low"）もそのまま保存
+      if (v !== null) {
+        try { backup[k] = JSON.parse(v); } catch { backup[k] = v; }
+      }
     });
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -63,7 +76,11 @@ export default function SettingsPage() {
       try {
         const data = JSON.parse(ev.target?.result as string);
         BACKUP_KEYS.forEach((k) => {
-          if (data[k] !== undefined) localStorage.setItem(k, JSON.stringify(data[k]));
+          if (data[k] !== undefined) {
+            const val = data[k];
+            // 生文字列はそのまま、それ以外はJSONとして復元
+            localStorage.setItem(k, typeof val === "string" ? val : JSON.stringify(val));
+          }
         });
         setImportMsg("復元完了！再読み込みします…");
         setTimeout(() => window.location.reload(), 1200);
@@ -109,9 +126,7 @@ export default function SettingsPage() {
       if (p.birthdate) setBirthdate(p.birthdate);
       if (p.gender) setGender(p.gender);
     } else {
-      const d = new Date();
-      d.setMonth(d.getMonth() + 1);
-      setGoalDate(d.toISOString().split("T")[0]);
+      setGoalDate(oneMonthLater());
     }
     setLastBackup(localStorage.getItem(LAST_BACKUP_KEY));
     const showME = localStorage.getItem("wm_show_meal_exercise");
@@ -146,7 +161,7 @@ export default function SettingsPage() {
     saveProfile({
       height: Number(height),
       goalWeight: Number(goalWeight),
-      goalDate: goalDate || (() => { const d = new Date(); d.setMonth(d.getMonth() + 1); return d.toISOString().split("T")[0]; })(),
+      goalDate: goalDate || oneMonthLater(),
       notificationTime: existingNotificationTime,
       targetCalories: recommendedTarget,
       birthdate: birthdate || undefined,
@@ -191,10 +206,7 @@ export default function SettingsPage() {
   const needsBackup = daysSinceBackup === null || daysSinceBackup >= 30;
 
   function handleSave() {
-    const parsedGoalDate = goalDate || (() => {
-      const d = new Date(); d.setMonth(d.getMonth() + 1);
-      return d.toISOString().split("T")[0];
-    })();
+    const parsedGoalDate = goalDate || oneMonthLater();
     const existingNotificationTime = getProfile()?.notificationTime ?? "08:00";
     saveProfile({
       height: Number(height),

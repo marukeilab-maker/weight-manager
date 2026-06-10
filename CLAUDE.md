@@ -24,8 +24,10 @@
 | `wm_meals` | 食事カロリー記録（日付・朝昼夜間食） |
 | `wm_exercises` | 運動記録（日付・種目・時間・消費kcal） |
 | `wm_meal_dishes` | 各食事スロットの料理詳細 |
+| `wm_custom_food_history` | よく使う料理（★お気に入り） |
 | `wm_last_backup` | 最終バックアップ日 |
 | `wm_show_meal_exercise` | 食事・運動タブ表示設定（"false"で非表示） |
+| `wm_activity_level` | 活動レベル（"low"等の生文字列。JSONではない点に注意） |
 
 ---
 
@@ -203,8 +205,16 @@ export const BACKUP_KEYS = [
   "wm_meals",
   "wm_exercises",
   "wm_meal_dishes",
+  "wm_custom_food_history",
+  "wm_show_meal_exercise",
+  "wm_activity_level",
 ] as const;
 ```
+
+ホーム（handleBackup）と設定ページの両方がこの定数をimportして使っている。
+独自の配列を作らないこと。なお `wm_activity_level` は生文字列のため、
+エクスポート時は `try { JSON.parse } catch { 生文字列のまま }`、
+インポート時は `typeof val === "string" ? そのまま : JSON.stringify` で処理する。
 
 ---
 
