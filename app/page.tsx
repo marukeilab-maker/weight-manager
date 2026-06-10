@@ -113,7 +113,7 @@ export default function HomePage() {
     saveWeightRecord(record);
     loadData();
     setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setTimeout(() => setSaved(false), 5000);
   }
 
   function handleBackup() {
@@ -214,7 +214,10 @@ export default function HomePage() {
                   style={{
                     left: `${(i * 37 + 13) % 100}%`,
                     background: ["#fbbf24", "#f472b6", "#34d399", "#60a5fa", "#fb923c", "#a78bfa"][i % 6],
-                    animationDelay: `${(i % 8) * 0.09}s`,
+                    animationDelay: `${(i % 10) * 0.13}s`,
+                    animationDuration: `${2.6 + (i % 5) * 0.35}s`,
+                    width: `${6 + (i % 3) * 2}px`,
+                    height: `${9 + (i % 4) * 2}px`,
                   }}
                 />
               ))}
