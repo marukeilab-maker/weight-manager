@@ -28,6 +28,8 @@
 | `wm_last_backup` | 最終バックアップ日 |
 | `wm_show_meal_exercise` | 食事・運動タブ表示設定（"false"で非表示） |
 | `wm_activity_level` | 活動レベル（"low"等の生文字列。JSONではない点に注意） |
+| `wm_maintenance` | 維持モード `{startDate, baseWeight}`。存在＝維持モードON |
+| `wm_goal_celebrated` | お祝い済みの目標体重値（同じ目標で再度お祝いしないため） |
 
 ---
 
@@ -143,6 +145,16 @@ git add <変更ファイル>
 git commit -m "変更内容"
 git push origin main
 ```
+
+---
+
+## 維持モード・お祝い画面の仕組み
+
+- ホームで体重記録時、`体重 <= goalWeight` かつ `wm_goal_celebrated !== String(goalWeight)` かつ維持モードOFFなら、フルスクリーンお祝い画面を表示
+- お祝い画面の「維持モードをはじめる」で `wm_maintenance` に `{startDate, baseWeight: goalWeight}` を保存
+- 維持モード中はホームの目標カードの代わりに維持モードカード（基準±1kgバンド）を表示
+- 解除は設定ページの維持モードバナーから（`wm_maintenance` を削除）
+- 解除後、**別の目標体重**を設定すれば再びお祝いが出る（同じ目標では出ない）
 
 ---
 

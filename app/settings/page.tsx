@@ -43,6 +43,7 @@ export default function SettingsPage() {
   const [autoApplied, setAutoApplied] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [showMealExercise, setShowMealExercise] = useState(true);
+  const [maintenanceInfo, setMaintenanceInfo] = useState<{ startDate: string; baseWeight: number } | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
 
   const LAST_BACKUP_KEY = "wm_last_backup";
@@ -134,6 +135,11 @@ export default function SettingsPage() {
     // 活動レベルの保存値を復元
     const savedActivity = localStorage.getItem("wm_activity_level");
     if (savedActivity) setActivityLevel(savedActivity);
+    // 維持モードの状態を復元
+    try {
+      const m = localStorage.getItem("wm_maintenance");
+      setMaintenanceInfo(m ? JSON.parse(m) : null);
+    } catch { setMaintenanceInfo(null); }
     // 最新体重を取得
     const recs = getWeightRecords();
     if (recs.length) setCurrentWeight(recs[recs.length - 1].weight);
@@ -332,6 +338,33 @@ export default function SettingsPage() {
 
         {/* ── 目標設定 ── */}
         <p className="text-xs font-black text-gray-400 tracking-wide pt-2 pl-1">目標設定</p>
+
+        {/* 維持モード中バナー */}
+        {maintenanceInfo && (
+          <div className="bg-teal-50 border-2 border-teal-200 rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-sm font-black text-teal-700">🛡️ 維持モード中</p>
+              <span className="text-xs text-teal-500 font-bold">
+                {(() => {
+                  const d = new Date(maintenanceInfo.startDate + "T00:00:00");
+                  return `${d.getMonth() + 1}月${d.getDate()}日から`;
+                })()}
+              </span>
+            </div>
+            <p className="text-xs text-teal-600 mb-3">
+              基準体重 {maintenanceInfo.baseWeight}kg をキープ中。解除すると通常の目標モードに戻ります。
+            </p>
+            <button
+              onClick={() => {
+                localStorage.removeItem("wm_maintenance");
+                setMaintenanceInfo(null);
+              }}
+              className="w-full py-2.5 bg-white border border-teal-300 text-teal-600 font-bold rounded-xl text-sm active:scale-95 transition-all"
+            >
+              維持モードを解除して新しい目標に挑戦する
+            </button>
+          </div>
+        )}
 
         {/* 目標体重 */}
         <div className="bg-white rounded-2xl shadow-lg p-4">

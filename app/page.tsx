@@ -43,6 +43,8 @@ export default function HomePage() {
   const [backupDays, setBackupDays] = useState<number | null>(null);
   const [backupDismissed, setBackupDismissed] = useState(false);
   const [showMealExercise, setShowMealExercise] = useState(true);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [maintenance, setMaintenance] = useState<{ startDate: string; baseWeight: number } | null>(null);
 
   const loadData = useCallback(() => {
     const p = getProfile();
@@ -74,6 +76,11 @@ export default function HomePage() {
     }
     setBackupDismissed(localStorage.getItem("wm_backup_dismissed_" + today()) === "1");
     setShowMealExercise(localStorage.getItem("wm_show_meal_exercise") !== "false");
+    // 維持モードの状態を読み込み
+    try {
+      const m = localStorage.getItem("wm_maintenance");
+      setMaintenance(m ? JSON.parse(m) : null);
+    } catch { setMaintenance(null); }
     // 今週月曜日に既に閉じたかチェック（ローカルタイム基準）
     const thisMonday = (() => {
       const now = new Date();
@@ -113,8 +120,25 @@ export default function HomePage() {
     const record: WeightRecord = { date: today(), weight: w, bmi };
     saveWeightRecord(record);
     loadData();
+    // 目標達成チェック（維持モード中・お祝い済みの目標は除く）
+    const inMaintenance = !!localStorage.getItem("wm_maintenance");
+    const celebrated = localStorage.getItem("wm_goal_celebrated");
+    if (!inMaintenance && w <= profile.goalWeight && celebrated !== String(profile.goalWeight)) {
+      localStorage.setItem("wm_goal_celebrated", String(profile.goalWeight));
+      setShowCelebration(true);
+      return; // お祝い画面を出すので紙吹雪はスキップ
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 5000);
+  }
+
+  // 維持モードを開始（達成した目標体重を基準にする）
+  function startMaintenance() {
+    if (!profile) return;
+    const data = { startDate: today(), baseWeight: profile.goalWeight };
+    localStorage.setItem("wm_maintenance", JSON.stringify(data));
+    setMaintenance(data);
+    setShowCelebration(false);
   }
 
   function handleBackup() {
@@ -171,6 +195,56 @@ export default function HomePage() {
 
   return (
     <div className="pb-20 bg-gray-50 min-h-screen">
+
+      {/* ── 目標達成お祝い画面 ── */}
+      {showCelebration && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gradient-to-br from-teal-500 via-teal-600 to-orange-400 overflow-hidden">
+          {/* フルスクリーン紙吹雪 */}
+          {Array.from({ length: 36 }).map((_, i) => (
+            <span
+              key={i}
+              className="confetti-tall"
+              style={{
+                left: `${(i * 29 + 7) % 100}%`,
+                background: ["#fbbf24", "#f472b6", "#34d399", "#93c5fd", "#fb923c", "#c4b5fd", "#fde047"][i % 7],
+                animationDelay: `${(i % 12) * 0.35}s`,
+                animationDuration: `${3.8 + (i % 5) * 0.5}s`,
+                width: `${7 + (i % 3) * 2}px`,
+                height: `${11 + (i % 4) * 2}px`,
+              }}
+            />
+          ))}
+          <div className="celebration-pop bg-white rounded-3xl mx-6 px-6 py-8 text-center shadow-2xl max-w-sm relative z-10">
+            <p className="text-5xl mb-2">🎊</p>
+            <h2 className="text-2xl font-black text-gray-800 mb-1">目標達成！</h2>
+            <p className="text-sm font-bold text-teal-600 mb-4">
+              目標体重 {profile.goalWeight}kg に到達しました
+            </p>
+            <img src="/cats/cat-4.png" alt="こたろう" className="w-36 h-36 mx-auto object-contain win-bounce" />
+            <div className="bg-orange-50 rounded-2xl px-4 py-3 mt-4 mb-5">
+              <p className="text-xs font-bold text-gray-700 leading-relaxed">
+                やったにゃー！！🎉<br />
+                毎日コツコツ続けたあなたの勝利だにゃ。<br />
+                こたろうは本当にうれしいにゃ…！😻
+              </p>
+            </div>
+            <button
+              onClick={startMaintenance}
+              className="w-full py-3.5 bg-gradient-to-r from-teal-500 to-teal-600 text-white font-black rounded-2xl text-sm shadow-lg active:scale-95 transition-transform mb-2"
+            >
+              🛡️ 維持モードをはじめる
+            </button>
+            <p className="text-[10px] text-gray-400 mb-2">リバウンド防止！達成した体重をキープするモード</p>
+            <button
+              onClick={() => setShowCelebration(false)}
+              className="text-xs text-gray-400 font-bold py-1"
+            >
+              あとで決める
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header gradient */}
       <div className="bg-gradient-to-br from-teal-500 to-teal-700 pt-5 pb-6 px-4 rounded-b-3xl shadow-lg">
         <div className="flex items-start justify-between mb-2">
@@ -369,13 +443,69 @@ export default function HomePage() {
           </div>
         )}
 
-        {isUnhealthyGoal && (
+        {!maintenance && isUnhealthyGoal && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-3 text-sm text-yellow-700">
             ⚠️ 設定されたペースは健康的な減量目安（体重の0.5〜1%/週）を超えています。無理のない計画をおすすめします。
           </div>
         )}
 
+        {/* 維持モードカード（目標達成後） */}
+        {maintenance && (() => {
+          const base = maintenance.baseWeight;
+          const diff = +(currentWeight - base).toFixed(1);
+          const withinBand = Math.abs(diff) <= 1.0;
+          const days = Math.max(1, daysBetween(maintenance.startDate, today()) + 1);
+          const status = withinBand
+            ? { emoji: "✅", msg: "いいキープ力だにゃ！この調子✨", color: "text-teal-600", bg: "bg-teal-50" }
+            : diff > 0
+            ? { emoji: "⚠️", msg: `基準より +${diff}kg。少し戻そうにゃ💪`, color: "text-red-500", bg: "bg-red-50" }
+            : { emoji: "💙", msg: `基準より ${diff}kg。減らしすぎにも注意だにゃ`, color: "text-blue-500", bg: "bg-blue-50" };
+          return (
+            <div className="bg-white rounded-2xl shadow-lg p-4 border-2 border-teal-100">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-sm font-black text-teal-600">🛡️ 維持モード</p>
+                <span className="bg-teal-50 text-teal-600 text-xs font-black px-2.5 py-1 rounded-full">{days}日目</span>
+              </div>
+              <p className="text-xs text-gray-400 mb-3">
+                {base}kg を基準に ±1kg 以内のキープを目指しています
+              </p>
+              <div className="flex items-center justify-center gap-4 mb-3">
+                <img src="/cats/cat-4.png" alt="こたろう" className="w-20 h-20 object-contain" />
+                <div className="text-center">
+                  <p className="text-[10px] text-gray-400 font-bold">現在</p>
+                  <p className="text-3xl font-black text-gray-900">{currentWeight}<span className="text-sm text-gray-400">kg</span></p>
+                  <p className={`text-xs font-black ${diff > 0 ? "text-red-400" : diff < 0 ? "text-blue-400" : "text-gray-400"}`}>
+                    {diff > 0 ? `+${diff}` : diff}kg <span className="text-gray-400 font-normal">（基準比）</span>
+                  </p>
+                </div>
+              </div>
+              {/* ±1kgバンドのビジュアル */}
+              <div className="relative w-full bg-gray-100 rounded-full h-3 mb-1">
+                <div className="absolute left-[25%] right-[25%] top-0 h-3 bg-teal-100 rounded-full" />
+                {(() => {
+                  // -2kg〜+2kgの範囲にマッピング（中央=基準）
+                  const pos = Math.min(100, Math.max(0, ((diff + 2) / 4) * 100));
+                  return (
+                    <div
+                      className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full border-2 border-white shadow ${withinBand ? "bg-teal-500" : diff > 0 ? "bg-red-400" : "bg-blue-400"}`}
+                      style={{ left: `${pos}%` }}
+                    />
+                  );
+                })()}
+              </div>
+              <div className="flex justify-between text-[9px] text-gray-400 font-bold mb-3">
+                <span>-2kg</span><span>-1kg</span><span className="text-teal-500">基準 {base}kg</span><span>+1kg</span><span>+2kg</span>
+              </div>
+              <div className={`${status.bg} rounded-xl px-4 py-2.5 text-center`}>
+                <p className={`text-xs font-black ${status.color}`}>{status.emoji} {status.msg}</p>
+              </div>
+              <p className="text-[10px] text-gray-300 text-center mt-2">解除や新しい目標の設定は「設定」からできます</p>
+            </div>
+          );
+        })()}
+
         {/* Goal card */}
+        {!maintenance && (
         <div className="bg-white rounded-2xl shadow-lg p-4">
           <p className="text-gray-500 text-sm mb-1">
             📅 {formatDate(profile.goalDate)}までに ⚖️ {profile.goalWeight}kgを目指しています！
@@ -461,6 +591,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+        )}
 
         {/* カロリー収支カード */}
         {showMealExercise && (() => {

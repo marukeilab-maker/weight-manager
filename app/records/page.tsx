@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Trash2, TrendingDown, TrendingUp, Minus, Pencil, Check, X, Plus } from "lucide-react";
+import { Trash2, TrendingDown, TrendingUp, Minus, Pencil, Check, X, Plus, ChevronDown } from "lucide-react";
 import WeightChart from "@/components/WeightChart";
 import { getWeightRecords, saveWeightRecord, deleteWeightRecord, getAllMeals, getProfile } from "@/lib/storage";
 import { WeightRecord } from "@/lib/types";
@@ -19,6 +19,17 @@ export default function RecordsPage() {
   const [addDate, setAddDate] = useState(today());
   const [addWeight, setAddWeight] = useState("");
   const [showMealExercise, setShowMealExercise] = useState(true);
+  // 月別アーカイブ：開いている月（今月はデフォルトで開く）
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(() => new Set([today().slice(0, 7)]));
+
+  const toggleMonth = (m: string) => {
+    setExpandedMonths(prev => {
+      const next = new Set(prev);
+      if (next.has(m)) next.delete(m);
+      else next.add(m);
+      return next;
+    });
+  };
 
   const reload = () => {
     setRecords(getWeightRecords().slice().reverse());
@@ -324,16 +335,53 @@ export default function RecordsPage() {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          {records.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">
-              <p className="text-4xl mb-2">📝</p>
-              <p>記録がありません</p>
-            </div>
-          ) : (
-            records.map((r, i) => {
+        {records.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-lg p-8 text-center text-gray-400">
+            <p className="text-4xl mb-2">📝</p>
+            <p>記録がありません</p>
+          </div>
+        ) : (
+          (() => {
+            // 月別にグループ化（recordsは新しい順）
+            const groups: { month: string; items: { r: WeightRecord; diff: number | null }[] }[] = [];
+            records.forEach((r, i) => {
+              const month = r.date.slice(0, 7);
               const next = records[i + 1];
               const diff = next ? r.weight - next.weight : null;
+              const last = groups[groups.length - 1];
+              if (last && last.month === month) last.items.push({ r, diff });
+              else groups.push({ month, items: [{ r, diff }] });
+            });
+            return groups.map(({ month, items }) => {
+              const open = expandedMonths.has(month);
+              const [y, m] = month.split("-");
+              const avg = +(items.reduce((s, it) => s + it.r.weight, 0) / items.length).toFixed(1);
+              const monthDiff = items.length >= 2
+                ? +(items[0].r.weight - items[items.length - 1].r.weight).toFixed(1)
+                : null;
+              return (
+                <div key={month} className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                  {/* 月ヘッダー */}
+                  <button
+                    onClick={() => toggleMonth(month)}
+                    className="w-full flex items-center justify-between px-4 py-3 active:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-black text-gray-800">{y}年{Number(m)}月</span>
+                      <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{items.length}件</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400 font-bold">平均 {avg}kg</span>
+                      {monthDiff !== null && (
+                        <span className={`text-xs font-black ${monthDiff < 0 ? "text-teal-600" : monthDiff > 0 ? "text-red-400" : "text-gray-400"}`}>
+                          {monthDiff > 0 ? `+${monthDiff}` : monthDiff}kg
+                        </span>
+                      )}
+                      <ChevronDown size={16} className={`text-gray-300 transition-transform ${open ? "rotate-180" : ""}`} />
+                    </div>
+                  </button>
+                  {/* 月の記録一覧 */}
+                  {open && items.map(({ r, diff }) => {
               const isEditing = editingDate === r.date;
 
               return (
@@ -431,9 +479,12 @@ export default function RecordsPage() {
                   )}
                 </div>
               );
-            })
-          )}
-        </div>
+                  })}
+                </div>
+              );
+            });
+          })()
+        )}
 
         {/* フッターロゴ */}
         <div className="flex justify-center pt-5 pb-3">
