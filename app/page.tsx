@@ -180,8 +180,6 @@ export default function HomePage() {
   // BMI表示用：今日の記録がなくても直近の体重から計算して常に表示
   const latestRecord = todayRecord ?? sortedRecords[sortedRecords.length - 1] ?? null;
   const displayBmi = latestRecord ? calcBMI(latestRecord.weight, profile.height) : null;
-  // 開始時BMI（こたろうのスタート段階用）
-  const startBmi = startWeight > 0 ? calcBMI(startWeight, profile.height) : null;
   const age = profile.birthdate ? calcAge(profile.birthdate) : null;
 
   // 連続記録日数（ストリーク）— タイムゾーン安全な calcStreak を使用
@@ -522,7 +520,7 @@ export default function HomePage() {
           </p>
 
           <div className="flex justify-center mb-2">
-            <WeightCat progress={progress} bmi={displayBmi} startBmi={startBmi} goalBmi={profile.height > 0 ? calcBMI(profile.goalWeight, profile.height) : null} />
+            <WeightCat progress={progress} bmi={displayBmi} goalBmi={profile.height > 0 ? calcBMI(profile.goalWeight, profile.height) : null} />
           </div>
 
           {/* こたろうからの日替わりメッセージ（記録した日に表示） */}

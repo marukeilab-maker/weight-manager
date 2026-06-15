@@ -2,25 +2,25 @@
 
 interface Props {
   progress: number;
-  bmi?: number | null;       // 現在のBMI（痩せ型保護用）
-  startBmi?: number | null;  // 開始時のBMI（スタート段階の決定用）
+  bmi?: number | null;       // 現在のBMI（体型段階の決定用）
   goalBmi?: number | null;   // 目標体重のBMI（不健康な目標での祝福抑制用）
 }
 
-// BMI（体型）に応じた猫の段階：肥満ほど cat-0（太）、痩せるほど cat-4（細）
+// BMI（体型）に応じた猫の段階：日本肥満学会の区分に対応
+// cat-0（一番ぽっちゃり）＝肥満3度 … cat-3（スリム）＝普通体重 / skinny＝低体重
 function stageByBmi(bmi: number): number {
-  if (bmi >= 30) return 0; // 高度肥満
-  if (bmi >= 25) return 1; // 肥満
-  if (bmi >= 22) return 2; // 普通（やや上）
-  if (bmi >= 18.5) return 3; // 普通
-  return 4; // 痩せ型
+  if (bmi >= 35) return 0;   // 肥満(3度)
+  if (bmi >= 30) return 1;   // 肥満(2度)
+  if (bmi >= 25) return 2;   // 肥満(1度)
+  if (bmi >= 18.5) return 3; // 普通体重
+  return 4;                  // 低体重（skinny）
 }
 
-export default function WeightCat({ progress, bmi, startBmi, goalBmi }: Props) {
+export default function WeightCat({ progress, bmi, goalBmi }: Props) {
   const p = Math.min(100, Math.max(0, progress));
 
-  // 開始時の体型に応じたスタート段階
-  const startStage = startBmi != null && startBmi > 0 ? stageByBmi(startBmi) : 0;
+  // 現在のBMIに応じた体型段階（肥満3度=0 … 低体重=4）
+  const currentStage = bmi != null && bmi > 0 ? stageByBmi(bmi) : 0;
 
   const isUnderweight = bmi != null && bmi > 0 && bmi < 18.5;
   // 現在体重が美容体重以下（18.5≤BMI<20）→ キラキラなし
@@ -32,17 +32,14 @@ export default function WeightCat({ progress, bmi, startBmi, goalBmi }: Props) {
   const isWin = p >= 100 && !isUnderweight && !isUnhealthyGoal && !isBelowBeautyGoal && !isBelowBeautyCurrent;
 
   // cat-4 は「達成時」だけの特別な画像（手を上げてキラキラ）。
-  // 道中は cat-0〜cat-3 のみを使い、達成率に応じて cat-3 へ近づく。
+  // 道中は現在のBMI区分に応じて cat-0〜cat-3 / skinny を表示する。
   let stage: number;
   if (isWin) {
     stage = 4;
   } else if (p >= 100 && (isBelowBeautyGoal || isBelowBeautyCurrent) && !isUnderweight) {
     stage = 4; // cat-4をキラキラなしで使用
   } else {
-    const start = Math.min(3, startStage);
-    stage = Math.round(start + (3 - start) * (p / 100));
-    stage = Math.min(3, Math.max(start, stage));
-    if (isUnderweight) stage = 3;
+    stage = currentStage; // 現在の体型をそのまま反映（0〜4）
   }
 
   // メッセージ
@@ -58,12 +55,13 @@ export default function WeightCat({ progress, bmi, startBmi, goalBmi }: Props) {
     message = "目標達成！おめでとう🎉";
     highlight = true;
   } else {
+    // 現在の体型（BMI区分）に応じた前向きメッセージ
     const stageMsg = [
-      "まだまだこれから…😴",
-      "少しずつ動き出した！🐾",
-      "折り返し地点！いい調子⭐",
-      "あと少し！スリム目前🏁",
-      "理想の体型をキープ✨",
+      "一緒にコツコツがんばろう🐾",   // 0 肥満(3度)
+      "いい調子！その調子で続けよう💪", // 1 肥満(2度)
+      "あと少しで標準体重だよ⭐",       // 2 肥満(1度)
+      "理想的な体型をキープ✨",         // 3 普通体重
+      "もう十分スリムだよ🐱",           // 4 低体重（通常はisUnderweightで上に分岐）
     ];
     message = stageMsg[stage];
   }
