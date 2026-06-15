@@ -218,7 +218,7 @@ export default function HomePage() {
             <p className="text-sm font-bold text-teal-600 mb-4">
               目標体重 {profile.goalWeight}kg に到達しました
             </p>
-            <img src="/cats/cat-4.png" alt="こたろう" className="w-36 h-36 mx-auto object-contain win-bounce" />
+            <img src="/cats/cat-win.png" alt="こたろう" className="w-36 h-36 mx-auto object-contain win-sway" />
             <div className="bg-orange-50 rounded-2xl px-4 py-3 mt-4 mb-5">
               <p className="text-xs font-bold text-gray-700 leading-relaxed">
                 やったにゃー！！🎉<br />

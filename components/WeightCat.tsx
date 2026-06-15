@@ -103,10 +103,16 @@ export default function WeightCat({ progress, bmi, goalBmi }: Props) {
           ))}
 
         <img
-          src={isUnderweight ? "/cats/cat-skinny.png" : `/cats/cat-${stage}.png`}
+          src={
+            isUnderweight
+              ? "/cats/cat-skinny.png"
+              : showSparkle
+              ? "/cats/cat-win.png" // 達成時は両手バンザイの特別画像
+              : `/cats/cat-${stage}.png`
+          }
           alt="こたろう"
           draggable={false}
-          className={`select-none ${showSparkle ? "win-bounce" : ""}`}
+          className={`select-none ${showSparkle ? "win-sway" : ""}`}
           style={{
             // 低体重のこたろうは他より一回り小さく（2/3サイズ）＆少し上に表示
             height: isUnderweight ? "66.7%" : "100%",
