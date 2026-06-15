@@ -53,15 +53,15 @@ input[type="number"]::-webkit-outer-spin-button {
 
 /* 達成猫のゆらゆら揺れ（左右に傾く＋軽く弾む）— なめらかな弧を描く */
 @keyframes winSway {
-  0%   { transform: rotate(-3.5deg) translateY(0); }
-  12.5% { transform: rotate(-2.5deg) translateY(-2px); }
+  0%   { transform: rotate(-1.5deg) translateY(0); }
+  12.5% { transform: rotate(-1deg) translateY(-2px); }
   25%  { transform: rotate(0deg) translateY(-3px); }
-  37.5% { transform: rotate(2.5deg) translateY(-2px); }
-  50%  { transform: rotate(3.5deg) translateY(0); }
-  62.5% { transform: rotate(2.5deg) translateY(-2px); }
+  37.5% { transform: rotate(1deg) translateY(-2px); }
+  50%  { transform: rotate(1.5deg) translateY(0); }
+  62.5% { transform: rotate(1deg) translateY(-2px); }
   75%  { transform: rotate(0deg) translateY(-3px); }
-  87.5% { transform: rotate(-2.5deg) translateY(-2px); }
-  100% { transform: rotate(-3.5deg) translateY(0); }
+  87.5% { transform: rotate(-1deg) translateY(-2px); }
+  100% { transform: rotate(-1.5deg) translateY(0); }
 }
 .win-sway {
   /* 正弦波風のイージングで切り返しをなめらかに */
