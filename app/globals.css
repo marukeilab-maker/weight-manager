@@ -51,16 +51,23 @@ input[type="number"]::-webkit-outer-spin-button {
   animation: winBounce 1.2s ease-in-out infinite;
 }
 
-/* 達成猫のゆらゆら揺れ（左右に傾く＋軽く弾む） */
+/* 達成猫のゆらゆら揺れ（左右に傾く＋軽く弾む）— なめらかな弧を描く */
 @keyframes winSway {
-  0%, 100% { transform: rotate(-4deg) translateY(0); }
-  25% { transform: rotate(0deg) translateY(-4px); }
-  50% { transform: rotate(4deg) translateY(0); }
-  75% { transform: rotate(0deg) translateY(-4px); }
+  0%   { transform: rotate(-3.5deg) translateY(0); }
+  12.5% { transform: rotate(-2.5deg) translateY(-2px); }
+  25%  { transform: rotate(0deg) translateY(-3px); }
+  37.5% { transform: rotate(2.5deg) translateY(-2px); }
+  50%  { transform: rotate(3.5deg) translateY(0); }
+  62.5% { transform: rotate(2.5deg) translateY(-2px); }
+  75%  { transform: rotate(0deg) translateY(-3px); }
+  87.5% { transform: rotate(-2.5deg) translateY(-2px); }
+  100% { transform: rotate(-3.5deg) translateY(0); }
 }
 .win-sway {
-  animation: winSway 1.8s ease-in-out infinite;
+  /* 正弦波風のイージングで切り返しをなめらかに */
+  animation: winSway 2.4s cubic-bezier(0.37, 0, 0.63, 1) infinite;
   transform-origin: bottom center;
+  will-change: transform;
 }
 
 /* 記録完了の紙吹雪 */
