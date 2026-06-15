@@ -15,14 +15,15 @@ function Wheel({ items, value, onChange, width }: {
   const scrolling = useRef(false);
 
   // value が外から変わった時だけ位置を合わせる（スクロール中は無視）
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // items を依存から除外 → 毎レンダーで位置リセットされる不具合を防ぐ
   useEffect(() => {
     const el = ref.current;
     if (!el || scrolling.current) return;
     const idx = items.indexOf(value);
     if (idx < 0) return;
     if (Math.abs(el.scrollTop - idx * ITEM_H) > 2) el.scrollTop = idx * ITEM_H;
-  }, [value]); // items を依存から除外 → 毎レンダーで位置リセットされる不具合を防ぐ
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
 
   const handleScroll = () => {
     scrolling.current = true;

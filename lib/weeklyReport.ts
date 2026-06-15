@@ -45,18 +45,6 @@ function getLastWeekRange(): { start: string; end: string } {
   return { start: toDateStr(lastMonday), end: toDateStr(lastSunday) };
 }
 
-/** 日付の配列（startからend）を生成 */
-function dateRange(start: string, end: string): string[] {
-  const dates: string[] = [];
-  const cur = new Date(start + "T00:00:00");
-  const last = new Date(end + "T00:00:00");
-  while (cur <= last) {
-    dates.push(toDateStr(cur));
-    cur.setDate(cur.getDate() + 1);
-  }
-  return dates;
-}
-
 /** 体重変化に応じたこたろうのコメント */
 function buildMessage(
   weightDiff: number | null,
@@ -134,7 +122,6 @@ export function getWeeklyReport(
   allExercises: ExerciseRecord[]
 ): WeeklyReport | null {
   const { start, end } = getLastWeekRange();
-  const days = dateRange(start, end);
 
   // 先週の体重記録
   const weekRecords = allRecords.filter((r) => r.date >= start && r.date <= end);
