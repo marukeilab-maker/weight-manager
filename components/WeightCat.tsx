@@ -108,11 +108,12 @@ export default function WeightCat({ progress, bmi, goalBmi }: Props) {
           draggable={false}
           className={`select-none ${showSparkle ? "win-bounce" : ""}`}
           style={{
-            // 低体重のこたろうは他より一回り小さく（2/3サイズ）で表示
+            // 低体重のこたろうは他より一回り小さく（2/3サイズ）＆少し上に表示
             height: isUnderweight ? "66.7%" : "100%",
             width: "auto",
             maxWidth: "100%",
             objectFit: "contain",
+            marginBottom: isUnderweight ? "20px" : undefined,
             transition: "opacity 0.4s ease-out",
           }}
         />
