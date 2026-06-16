@@ -16,7 +16,7 @@ import { WeightRecord } from "@/lib/types";
 import { getProfile, getMealRecord, getExerciseRecord, getAllMeals } from "@/lib/storage";
 import { calcBMR, calcAge } from "@/lib/calculations";
 import { getActivityFactor } from "@/lib/constants";
-import { calcAdaptiveMaintenance } from "@/lib/energy";
+import { calcChartMaintenance } from "@/lib/energy";
 
 type Range = "week" | "month" | "all";
 
@@ -62,8 +62,9 @@ export default function WeightChart({ records, goalWeight, showCaloriesOption = 
     const height = profile?.height ?? 170;
     // 日常活動係数（運動を除く）。消費 = 基礎代謝 × 係数 + 運動でホーム・食事と揃える。
     const activityFactor = getActivityFactor(localStorage.getItem("wm_activity_level"));
-    // 十分なデータがあれば実測ベースの維持カロリーを消費の基準にする（無ければ理論値）。
-    const adaptiveMaintenance = calcAdaptiveMaintenance(records, getAllMeals())?.maintenance ?? null;
+    // 体重トレンドに合わせた維持カロリーを消費の基準にする（無ければ理論値）。
+    // これによりバーの平均がトレンドと一致し、増加中に緑へ偏る矛盾が起きない。
+    const trendMaintenance = calcChartMaintenance(records, getAllMeals());
 
     // 日付ごとのデータを作成
     const dailyData: ChartPoint[] = [];
@@ -113,8 +114,8 @@ export default function WeightChart({ records, goalWeight, showCaloriesOption = 
       const bmr = calcBMR(bmrWeight, height, age, gender);
 
       // 1食でも記録されている日はグラフに表示（完了度に応じて透明度を変える）
-      // 実測ベースが使える時は維持カロリーを消費の基準に（運動は実測値に内包）。
-      const burned = adaptiveMaintenance ?? (Math.round(bmr * activityFactor) + exerciseKcal);
+      // トレンド基準が使える時は維持カロリーを消費の基準に（運動は実測値に内包）。
+      const burned = trendMaintenance ?? (Math.round(bmr * activityFactor) + exerciseKcal);
       const balance = recordedCount > 0
         ? intake - burned
         : undefined;

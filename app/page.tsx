@@ -611,6 +611,8 @@ export default function HomePage() {
           const burnedPct = Math.min(100, (totalBurned / maxVal) * 100);
           const intakePct = Math.min(100, (intake / maxVal) * 100);
           const isDeficit = balance >= 0;
+          // 理論値表示中に、体重が増加傾向なのに「不足」と出ている矛盾を検知（消費の見積もりが高すぎるサイン）
+          const trendContradicts = !isAdaptive && isDeficit && energy.recentTrendKgPerWeek != null && energy.recentTrendKgPerWeek > 0.1;
           const balanceLabel = isDeficit
             ? `${balance.toLocaleString()} kcal のマイナス 🎉`
             : `${Math.abs(balance).toLocaleString()} kcal オーバー ⚠️`;
@@ -651,7 +653,12 @@ export default function HomePage() {
                 </div>
               </div>
               {/* 収支結果 */}
-              {intake > 0 ? (
+              {intake > 0 && trendContradicts ? (
+                <div className="rounded-xl px-4 py-2.5 text-center bg-amber-50">
+                  <p className="text-sm font-black text-amber-600">体重は増加傾向です ⚠️</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">表示の消費は目安のため高めの可能性があります。記録を続けると実測ベースに切り替わり、正確になります</p>
+                </div>
+              ) : intake > 0 ? (
                 <div className={`rounded-xl px-4 py-2.5 text-center ${isDeficit ? "bg-teal-50" : "bg-red-50"}`}>
                   <p className={`text-sm font-black ${isDeficit ? "text-teal-600" : "text-red-500"}`}>{balanceLabel}</p>
                   <p className="text-[11px] text-gray-400 mt-0.5">{monthlyMsg}</p>

@@ -17,14 +17,44 @@ const KCAL_PER_KG = 7200;
 /** 遡る最大日数 */
 const WINDOW_DAYS = 28;
 /** 体重トレンドに必要な最小期間（日） */
-const MIN_SPAN_DAYS = 14;
+const MIN_SPAN_DAYS = 7;
 /** 必要な最小体重記録数 */
-const MIN_WEIGHT_POINTS = 5;
+const MIN_WEIGHT_POINTS = 4;
 /** 必要な最小食事記録日数 */
-const MIN_INTAKE_DAYS = 7;
+const MIN_INTAKE_DAYS = 5;
 /** ありえない値を弾くための維持カロリーの下限・上限 */
 const MIN_MAINTENANCE = 800;
 const MAX_MAINTENANCE = 5000;
+
+/**
+ * 直近 `days` 日の体重トレンド（kg/週）を線形回帰で返す。マイナス=減少。
+ * 2点以上かつ3日以上の期間が無ければ null。
+ */
+export function calcWeightTrendKgPerWeek(
+  records: WeightRecord[],
+  days = WINDOW_DAYS
+): number | null {
+  const t = today();
+  const start = addDays(t, -(days - 1));
+  const ws = records
+    .filter((r) => r.date >= start && r.date <= t)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (ws.length < 2) return null;
+  const base = ws[0].date;
+  const pts = ws.map((r) => ({ x: daysBetween(base, r.date), y: r.weight }));
+  if (pts[pts.length - 1].x < 3) return null;
+  const n = pts.length;
+  const mx = pts.reduce((s, p) => s + p.x, 0) / n;
+  const my = pts.reduce((s, p) => s + p.y, 0) / n;
+  let num = 0;
+  let den = 0;
+  for (const p of pts) {
+    num += (p.x - mx) * (p.y - my);
+    den += (p.x - mx) ** 2;
+  }
+  if (den === 0) return null;
+  return Math.round((num / den) * 7 * 100) / 100;
+}
 
 export interface AdaptiveMaintenance {
   /** 実測の維持カロリー（＝総消費カロリー, kcal/日） */
@@ -99,6 +129,34 @@ export function calcAdaptiveMaintenance(
   };
 }
 
+/**
+ * グラフのバー基準に使う「ベストエフォート維持カロリー」。
+ * 厳密な発動条件・サニティ範囲は課さず、体重トレンドと平均摂取があれば返す。
+ * バーの平均が体重トレンドと一致するため、「増加中なのに緑（不足）に偏る」矛盾が起きない。
+ * 計算できなければ null（理論値にフォールバック）。
+ */
+export function calcChartMaintenance(
+  records: WeightRecord[],
+  meals: MealRecord[]
+): number | null {
+  // まず厳密な実測ベースが出るならそれを使う
+  const strict = calcAdaptiveMaintenance(records, meals);
+  if (strict) return strict.maintenance;
+
+  // 厳密版が出ない時は、トレンド＋平均摂取があればトレンドに合わせて逆算
+  const trend = calcWeightTrendKgPerWeek(records, WINDOW_DAYS); // kg/週
+  if (trend == null) return null;
+  const t = today();
+  const start = addDays(t, -(WINDOW_DAYS - 1));
+  const logged = meals
+    .filter((m) => m.date >= start && m.date <= t)
+    .map((m) => m.breakfast + m.lunch + m.dinner + m.snack)
+    .filter((kcal) => kcal > 0);
+  if (logged.length < 3) return null;
+  const avgIntake = logged.reduce((s, kcal) => s + kcal, 0) / logged.length;
+  return Math.round(avgIntake - (trend / 7) * KCAL_PER_KG);
+}
+
 export interface DailyExpenditure {
   /** 今日の総消費カロリー（kcal） */
   burned: number;
@@ -110,6 +168,12 @@ export interface DailyExpenditure {
   exercise: number;
   /** 実測ベースの根拠（adaptive時のみ） */
   adaptive: AdaptiveMaintenance | null;
+  /**
+   * 直近の体重トレンド（kg/週, マイナス=減少）。estimate時に表示が体重の動きと
+   * 矛盾していないか（増えているのに「不足」と出ていないか）を判定するために使う。
+   * 計算できない場合は null。
+   */
+  recentTrendKgPerWeek: number | null;
 }
 
 /**
@@ -134,6 +198,7 @@ export function calcDailyExpenditure(params: {
       lifeActivity: 0,
       exercise: exerciseBurned,
       adaptive,
+      recentTrendKgPerWeek: adaptive.trendKgPerWeek,
     };
   }
   const dailyTdee = Math.round(bmr * factor);
@@ -144,5 +209,6 @@ export function calcDailyExpenditure(params: {
     lifeActivity: dailyTdee - bmr,
     exercise: exerciseBurned,
     adaptive: null,
+    recentTrendKgPerWeek: calcWeightTrendKgPerWeek(records, 14),
   };
 }

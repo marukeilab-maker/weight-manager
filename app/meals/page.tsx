@@ -395,6 +395,8 @@ export default function MealsPage() {
           const totalBurned = energy.burned;
           const balance = totalBurned - totalAll;
           const isDeficit = balance >= 0;
+          // 理論値表示中に、体重が増加傾向なのに「不足」と出ている矛盾を検知
+          const trendContradicts = !isAdaptive && isDeficit && energy.recentTrendKgPerWeek != null && energy.recentTrendKgPerWeek > 0.1;
           const maxVal = Math.max(totalBurned, totalAll, 1);
           const burnedPct = Math.min(100, (totalBurned / maxVal) * 100);
           const intakePct = Math.min(100, (totalAll / maxVal) * 100);
@@ -423,14 +425,20 @@ export default function MealsPage() {
                   </div>
                 </div>
               </div>
-              <div className={`rounded-xl px-3 py-2 flex items-center justify-between ${isDeficit ? "bg-teal-50" : "bg-red-50"}`}>
-                <span className={`text-xs font-black ${isDeficit ? "text-teal-600" : "text-red-500"}`}>
-                  {isDeficit ? "✅ 収支" : "⚠️ 収支"}
-                </span>
-                <span className={`text-sm font-black ${isDeficit ? "text-teal-600" : "text-red-500"}`}>
-                  {isDeficit ? `−${Math.round(balance)} kcal` : `+${Math.round(Math.abs(balance))} kcal オーバー`}
-                </span>
-              </div>
+              {trendContradicts ? (
+                <div className="rounded-xl px-3 py-2 bg-amber-50 text-center">
+                  <span className="text-xs font-black text-amber-600">体重は増加傾向です ⚠️ 消費は目安のため高めの可能性あり</span>
+                </div>
+              ) : (
+                <div className={`rounded-xl px-3 py-2 flex items-center justify-between ${isDeficit ? "bg-teal-50" : "bg-red-50"}`}>
+                  <span className={`text-xs font-black ${isDeficit ? "text-teal-600" : "text-red-500"}`}>
+                    {isDeficit ? "✅ 収支" : "⚠️ 収支"}
+                  </span>
+                  <span className={`text-sm font-black ${isDeficit ? "text-teal-600" : "text-red-500"}`}>
+                    {isDeficit ? `−${Math.round(balance)} kcal` : `+${Math.round(Math.abs(balance))} kcal オーバー`}
+                  </span>
+                </div>
+              )}
               {isAdaptive && energy.adaptive ? (
                 <p className="text-[10px] text-gray-400 text-center mt-2">過去{energy.adaptive.spanDays}日の体重と食事から算出（運動分も含む）</p>
               ) : exerciseBurned > 0 ? (
