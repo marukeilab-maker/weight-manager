@@ -112,10 +112,10 @@ export default function SettingsPage() {
   useEffect(() => {
     const p = getProfile();
     if (p) {
-      setHeight(String(p.height));
-      setGoalWeight(String(p.goalWeight));
-      setGoalDate(p.goalDate);
-      setTargetCalories(String(p.targetCalories));
+      setHeight(p.height != null ? String(p.height) : "");
+      setGoalWeight(p.goalWeight != null ? String(p.goalWeight) : "");
+      setGoalDate(p.goalDate ?? "");
+      setTargetCalories(p.targetCalories != null ? String(p.targetCalories) : "");
       if (p.birthdate) setBirthdate(p.birthdate);
       if (p.gender) setGender(p.gender);
     } else {

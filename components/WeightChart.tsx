@@ -15,6 +15,7 @@ import {
 import { WeightRecord } from "@/lib/types";
 import { getProfile, getMealRecord, getExerciseRecord } from "@/lib/storage";
 import { calcBMR, calcAge } from "@/lib/calculations";
+import { getActivityFactor } from "@/lib/constants";
 
 type Range = "week" | "month" | "all";
 
@@ -58,6 +59,8 @@ export default function WeightChart({ records, goalWeight, showCaloriesOption = 
     const age = profile?.birthdate ? calcAge(profile.birthdate) : 30;
     const gender = profile?.gender ?? "male";
     const height = profile?.height ?? 170;
+    // 日常活動係数（運動を除く）。消費 = 基礎代謝 × 係数 + 運動でホーム・食事と揃える。
+    const activityFactor = getActivityFactor(localStorage.getItem("wm_activity_level"));
 
     // 日付ごとのデータを作成
     const dailyData: ChartPoint[] = [];
@@ -108,7 +111,7 @@ export default function WeightChart({ records, goalWeight, showCaloriesOption = 
 
       // 1食でも記録されている日はグラフに表示（完了度に応じて透明度を変える）
       const balance = recordedCount > 0
-        ? intake - (bmr + exerciseKcal)
+        ? intake - (Math.round(bmr * activityFactor) + exerciseKcal)
         : undefined;
 
       const label =
