@@ -28,6 +28,7 @@ import {
 } from "@/lib/calculations";
 import { getDailyCatMessage } from "@/lib/catMessages";
 import { BACKUP_KEYS, getActivityFactor } from "@/lib/constants";
+import { calcDailyExpenditure } from "@/lib/energy";
 import { Profile, WeightRecord } from "@/lib/types";
 
 export default function HomePage() {
@@ -599,12 +600,12 @@ export default function HomePage() {
           const exerciseBurned = todayExercise ? todayExercise.entries.reduce((s, e) => s + e.calories, 0) : 0;
           const bmr = (age && profile.gender) ? calcBMR(currentWeight, profile.height, age, profile.gender) : 0;
           if (bmr === 0) return null;
-          // 消費 = 基礎代謝 × 日常活動係数（運動を除く）+ 運動記録。
-          // 活動係数は「運動以外の普段の活動量」を表すため、運動記録を上乗せしても二重計上にならない。
+          // 十分なデータがあれば実測ベース（体重の動きから逆算）、無ければ理論値（基礎代謝×活動係数+運動）。
           const factor = getActivityFactor(localStorage.getItem("wm_activity_level"));
-          const dailyTdee = Math.round(bmr * factor);
-          const lifeActivity = dailyTdee - bmr;
-          const totalBurned = dailyTdee + exerciseBurned;
+          const energy = calcDailyExpenditure({ records, meals: getAllMeals(), bmr, factor, exerciseBurned });
+          const isAdaptive = energy.mode === "adaptive";
+          const totalBurned = energy.burned;
+          const lifeActivity = energy.lifeActivity;
           const balance = totalBurned - intake;
           const maxVal = Math.max(totalBurned, intake, 1);
           const burnedPct = Math.min(100, (totalBurned / maxVal) * 100);
@@ -623,12 +624,19 @@ export default function HomePage() {
               {/* 消費バー */}
               <div className="mb-2">
                 <div className="flex justify-between items-center text-xs text-gray-500 mb-1">
-                  <span>消費 <span className="text-gray-400 text-[10px]">基礎{bmr.toLocaleString()} + 生活活動{lifeActivity.toLocaleString()}{exerciseBurned > 0 ? ` + 運動${exerciseBurned.toLocaleString()}` : ""}</span></span>
+                  <span>消費 {isAdaptive
+                    ? <span className="text-teal-600 text-[10px] font-bold">実測ベース</span>
+                    : <span className="text-gray-400 text-[10px]">基礎{bmr.toLocaleString()} + 生活活動{lifeActivity.toLocaleString()}{exerciseBurned > 0 ? ` + 運動${exerciseBurned.toLocaleString()}` : ""}</span>}</span>
                   <span className="font-black text-teal-600">{totalBurned.toLocaleString()} kcal</span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-4">
                   <div className="h-4 rounded-full bg-gradient-to-r from-teal-400 to-teal-600 transition-all duration-700" style={{ width: `${burnedPct}%` }} />
                 </div>
+                {isAdaptive && energy.adaptive && (
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    過去{energy.adaptive.spanDays}日の体重と食事から算出（体重トレンド {energy.adaptive.trendKgPerWeek > 0 ? "+" : ""}{energy.adaptive.trendKgPerWeek}kg/週）。運動分も含みます
+                  </p>
+                )}
               </div>
               {/* 摂取バー */}
               <div className="mb-3">

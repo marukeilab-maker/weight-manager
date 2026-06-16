@@ -1,10 +1,11 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { X, ChevronLeft, ChevronRight, ClipboardList, Star } from "lucide-react";
-import { getMealRecord, saveMealRecord, getProfile, getWeightRecords, getAllExercises } from "@/lib/storage";
+import { getMealRecord, saveMealRecord, getProfile, getWeightRecords, getAllExercises, getAllMeals } from "@/lib/storage";
 import { today, addDays, calcBMR, calcAge } from "@/lib/calculations";
 import { searchFoods, FoodItem } from "@/lib/foodDatabase";
 import { getActivityFactor } from "@/lib/constants";
+import { calcDailyExpenditure } from "@/lib/energy";
 import { MealRecord } from "@/lib/types";
 
 // ── 型定義 ──────────────────────────────
@@ -387,9 +388,11 @@ export default function MealsPage() {
           const exercises = getAllExercises();
           const todayExercise = exercises.find((e) => e.date === today());
           const exerciseBurned = todayExercise ? todayExercise.entries.reduce((s, e) => s + e.calories, 0) : 0;
-          // 消費 = 基礎代謝 × 日常活動係数（運動を除く）+ 運動記録。ホーム画面と計算を揃える。
+          // 十分なデータがあれば実測ベース、無ければ理論値。ホーム画面と計算を揃える。
           const factor = getActivityFactor(localStorage.getItem("wm_activity_level"));
-          const totalBurned = Math.round(bmr * factor) + exerciseBurned;
+          const energy = calcDailyExpenditure({ records, meals: getAllMeals(), bmr, factor, exerciseBurned });
+          const isAdaptive = energy.mode === "adaptive";
+          const totalBurned = energy.burned;
           const balance = totalBurned - totalAll;
           const isDeficit = balance >= 0;
           const maxVal = Math.max(totalBurned, totalAll, 1);
@@ -401,7 +404,7 @@ export default function MealsPage() {
               <div className="space-y-2 mb-3">
                 <div>
                   <div className="flex justify-between text-xs font-bold text-gray-500 mb-1">
-                    <span>🔥 消費（基礎代謝＋生活活動{exerciseBurned > 0 ? `＋運動` : ""}）</span>
+                    <span>🔥 消費（{isAdaptive ? "実測ベース" : `基礎代謝＋生活活動${exerciseBurned > 0 ? "＋運動" : ""}`}）</span>
                     <span className="text-teal-600">{Math.round(totalBurned)} kcal</span>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-2.5">
@@ -428,9 +431,11 @@ export default function MealsPage() {
                   {isDeficit ? `−${Math.round(balance)} kcal` : `+${Math.round(Math.abs(balance))} kcal オーバー`}
                 </span>
               </div>
-              {exerciseBurned > 0 && (
+              {isAdaptive && energy.adaptive ? (
+                <p className="text-[10px] text-gray-400 text-center mt-2">過去{energy.adaptive.spanDays}日の体重と食事から算出（運動分も含む）</p>
+              ) : exerciseBurned > 0 ? (
                 <p className="text-[10px] text-gray-400 text-center mt-2">運動消費 {Math.round(exerciseBurned)} kcal 含む</p>
-              )}
+              ) : null}
             </div>
           );
         })()}
