@@ -1,11 +1,18 @@
+// 活動レベル（日常生活の活動量＝運動を除く）。運動した分は別途記録から加算するため、
+// ここには「運動以外の普段の活動量」を表す係数を持たせる。
 export const ACTIVITY_LEVELS = [
-  { key: "low",      label: "ほぼ運動なし", desc: "デスクワーク中心", factor: 1.2   },
-  { key: "light",    label: "軽い運動",     desc: "週1〜2回",        factor: 1.375 },
-  { key: "moderate", label: "中程度",       desc: "週3〜5回",        factor: 1.55  },
-  { key: "high",     label: "ハード",       desc: "週6〜7回",        factor: 1.725 },
+  { key: "low",      label: "座り仕事中心", desc: "ほぼ座っている",       factor: 1.2   },
+  { key: "light",    label: "ときどき動く", desc: "軽い家事・買い物程度", factor: 1.375 },
+  { key: "moderate", label: "よく動く",     desc: "立ち仕事・歩くことが多い", factor: 1.55  },
+  { key: "high",     label: "とても活発",   desc: "肉体労働・一日中動く", factor: 1.725 },
 ] as const;
 
 export type ActivityLevelKey = typeof ACTIVITY_LEVELS[number]["key"];
+
+/** 活動レベルのキー（localStorageの生文字列）から活動係数を返す。未設定・不正値は 1.2（ほぼ運動なし） */
+export function getActivityFactor(key: string | null | undefined): number {
+  return ACTIVITY_LEVELS.find((a) => a.key === key)?.factor ?? 1.2;
+}
 
 export const BACKUP_KEYS = [
   "wm_profile",

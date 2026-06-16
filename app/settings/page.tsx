@@ -5,7 +5,7 @@ import { Scale, Target, Calendar, Flame, CheckCircle, Download, Upload, Cake, Us
 import { getProfile, saveProfile, getWeightRecords, saveWeightRecord } from "@/lib/storage";
 import { today, calcBMR, calcAge, daysBetween, addDays, calcBMI } from "@/lib/calculations";
 import { APP_VERSION } from "@/lib/version";
-import { BACKUP_KEYS } from "@/lib/constants";
+import { BACKUP_KEYS, ACTIVITY_LEVELS } from "@/lib/constants";
 import BirthdateSelect from "@/components/BirthdateSelect";
 
 // 1ヶ月後の日付（ローカルタイム基準。toISOStringはUTCで日付がずれるため使わない）
@@ -17,14 +17,6 @@ function oneMonthLater(): string {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
-
-// 活動レベル（TDEE係数）
-const ACTIVITY_LEVELS = [
-  { key: "low",      label: "ほぼ運動なし", desc: "デスクワーク中心", factor: 1.2 },
-  { key: "light",    label: "軽い運動",     desc: "週1〜2回",        factor: 1.375 },
-  { key: "moderate", label: "中程度",       desc: "週3〜5回",        factor: 1.55 },
-  { key: "high",     label: "ハード",       desc: "週6〜7回",        factor: 1.725 },
-];
 
 export default function SettingsPage() {
   const [height, setHeight] = useState("170");
@@ -527,7 +519,7 @@ export default function SettingsPage() {
 
           {bmr ? (
             <>
-              <p className="text-[11px] text-gray-400 mb-2">普段の運動量を選んでください</p>
+              <p className="text-[11px] text-gray-400 mb-2">運動以外の普段の活動量を選んでください<br />（運動した分は運動記録から自動で加算されます）</p>
               <div className="grid grid-cols-2 gap-2 mb-3">
                 {ACTIVITY_LEVELS.map((a) => (
                   <button
