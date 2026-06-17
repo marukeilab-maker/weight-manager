@@ -5,7 +5,7 @@ import { Scale, Target, Calendar, Flame, CheckCircle, Download, Upload, Cake, Us
 import { getProfile, saveProfile, getWeightRecords, saveWeightRecord } from "@/lib/storage";
 import { today, calcBMR, calcAge, daysBetween, addDays, calcBMI } from "@/lib/calculations";
 import { APP_VERSION } from "@/lib/version";
-import { BACKUP_KEYS, ACTIVITY_LEVELS } from "@/lib/constants";
+import { BACKUP_KEYS, ACTIVITY_LEVELS, DAILY_TARGET_DEFICIT } from "@/lib/constants";
 import BirthdateSelect from "@/components/BirthdateSelect";
 
 // 1ヶ月後の日付（ローカルタイム基準。toISOStringはUTCで日付がずれるため使わない）
@@ -147,8 +147,8 @@ export default function SettingsPage() {
     : null;
   const factor = ACTIVITY_LEVELS.find((a) => a.key === activityLevel)?.factor ?? 1.2;
   const tdee = bmr ? Math.round(bmr * factor) : null;
-  // 減量目標：TDEEから約500kcal/日マイナス（健康的なペース ≒ -0.5kg/週）
-  const recommendedTarget = tdee ? Math.max(1200, tdee - 500) : null;
+  // 減量目標：TDEEから目標不足分マイナス（健康的なペース ≒ -0.5kg/週）
+  const recommendedTarget = tdee ? Math.max(1200, tdee - DAILY_TARGET_DEFICIT) : null;
 
   function applyAutoCalorie() {
     if (!recommendedTarget) return;

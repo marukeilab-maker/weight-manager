@@ -5,7 +5,7 @@ import { Profile } from "@/lib/types";
 import { saveProfile, saveWeightRecord } from "@/lib/storage";
 import { today, calcBMR, calcAge, calcBMI } from "@/lib/calculations";
 import BirthdateSelect from "@/components/BirthdateSelect";
-import { ACTIVITY_LEVELS } from "@/lib/constants";
+import { ACTIVITY_LEVELS, DAILY_TARGET_DEFICIT } from "@/lib/constants";
 
 interface Props {
   onComplete: () => void;
@@ -62,7 +62,7 @@ export default function Onboarding({ onComplete }: Props) {
       : null;
   const factor = ACTIVITY_LEVELS.find((a) => a.key === activityLevel)?.factor ?? 1.2;
   const tdee = bmr ? Math.round(bmr * factor) : null;
-  const recommendedTarget = tdee ? Math.max(1200, tdee - 500) : null;
+  const recommendedTarget = tdee ? Math.max(1200, tdee - DAILY_TARGET_DEFICIT) : null;
   function applyAutoCalorie() {
     if (recommendedTarget) {
       setTargetCalories(String(recommendedTarget));
