@@ -27,7 +27,7 @@ import {
   addDays,
 } from "@/lib/calculations";
 import { getDailyCatMessage } from "@/lib/catMessages";
-import { BACKUP_KEYS, getActivityFactor } from "@/lib/constants";
+import { BACKUP_KEYS, getActivityFactor, DAILY_TARGET_DEFICIT } from "@/lib/constants";
 import { calcDailyExpenditure } from "@/lib/energy";
 import { Profile, WeightRecord } from "@/lib/types";
 
@@ -606,20 +606,19 @@ export default function HomePage() {
           const isAdaptive = energy.mode === "adaptive";
           const totalBurned = energy.burned;
           const lifeActivity = energy.lifeActivity;
-          const balance = totalBurned - intake;
+          const balance = totalBurned - intake; // プラス=不足
           const maxVal = Math.max(totalBurned, intake, 1);
           const burnedPct = Math.min(100, (totalBurned / maxVal) * 100);
           const intakePct = Math.min(100, (intake / maxVal) * 100);
+          // 目標ライン = 消費 − 目標不足(500kcal)。ここを下回って初めて「ダイエットペース達成」。
+          const targetLine = Math.max(0, totalBurned - DAILY_TARGET_DEFICIT);
+          const targetPct = Math.min(100, (targetLine / maxVal) * 100);
+          const achieved = balance >= DAILY_TARGET_DEFICIT; // 目標ペース達成
+          const overMaintenance = balance < 0;              // 維持超え（太る方向）
           const isDeficit = balance >= 0;
           // 理論値表示中に、体重が増加傾向なのに「不足」と出ている矛盾を検知（消費の見積もりが高すぎるサイン）
           const trendContradicts = !isAdaptive && isDeficit && energy.recentTrendKgPerWeek != null && energy.recentTrendKgPerWeek > 0.1;
-          const balanceLabel = isDeficit
-            ? `${balance.toLocaleString()} kcal のマイナス 🎉`
-            : `${Math.abs(balance).toLocaleString()} kcal オーバー ⚠️`;
           const monthlyKg = ((Math.abs(balance) * 30) / 7200).toFixed(1);
-          const monthlyMsg = isDeficit
-            ? `このペースなら月に約 ${monthlyKg}kg 減`
-            : `このペースなら月に約 ${monthlyKg}kg 増`;
           return (
             <div className="bg-white rounded-2xl shadow-lg p-4">
               <p className="text-sm font-black text-gray-700 mb-3">🔥 今日のカロリー収支</p>
@@ -640,16 +639,18 @@ export default function HomePage() {
                   </p>
                 )}
               </div>
-              {/* 摂取バー */}
+              {/* 摂取バー（目標ラインのマーカー付き） */}
               <div className="mb-3">
                 <div className="flex justify-between items-center text-xs text-gray-500 mb-1">
-                  <span>摂取</span>
+                  <span>摂取 <span className="text-gray-400 text-[10px]">目標 {targetLine.toLocaleString()}kcal まで</span></span>
                   <span className={`font-black ${intake > 0 ? "text-orange-500" : "text-gray-300"}`}>
                     {intake > 0 ? `${intake.toLocaleString()} kcal` : "未記録"}
                   </span>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-4">
+                <div className="relative w-full bg-gray-100 rounded-full h-4">
                   <div className="h-4 rounded-full bg-gradient-to-r from-orange-300 to-orange-500 transition-all duration-700" style={{ width: intake > 0 ? `${intakePct}%` : "0%" }} />
+                  {/* 目標ライン */}
+                  <div className="absolute top-[-2px] bottom-[-2px] w-0.5 bg-teal-600" style={{ left: `${targetPct}%` }} />
                 </div>
               </div>
               {/* 収支結果 */}
@@ -658,10 +659,20 @@ export default function HomePage() {
                   <p className="text-sm font-black text-amber-600">体重は増加傾向です ⚠️</p>
                   <p className="text-[11px] text-gray-500 mt-0.5">表示の消費は目安のため高めの可能性があります。記録を続けると実測ベースに切り替わり、正確になります</p>
                 </div>
+              ) : intake > 0 && achieved ? (
+                <div className="rounded-xl px-4 py-2.5 text-center bg-teal-50">
+                  <p className="text-sm font-black text-teal-600">ダイエットペース達成！🎉</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">目標ラインより{(balance - DAILY_TARGET_DEFICIT).toLocaleString()}kcal 余裕／このペースなら月に約 {monthlyKg}kg 減</p>
+                </div>
+              ) : intake > 0 && !overMaintenance ? (
+                <div className="rounded-xl px-4 py-2.5 text-center bg-amber-50">
+                  <p className="text-sm font-black text-amber-600">もう少し！あと {(DAILY_TARGET_DEFICIT - balance).toLocaleString()}kcal 👍</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">不足はしているけど、痩せるペースにはもう一歩（目標 −{DAILY_TARGET_DEFICIT}kcal）</p>
+                </div>
               ) : intake > 0 ? (
-                <div className={`rounded-xl px-4 py-2.5 text-center ${isDeficit ? "bg-teal-50" : "bg-red-50"}`}>
-                  <p className={`text-sm font-black ${isDeficit ? "text-teal-600" : "text-red-500"}`}>{balanceLabel}</p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">{monthlyMsg}</p>
+                <div className="rounded-xl px-4 py-2.5 text-center bg-red-50">
+                  <p className="text-sm font-black text-red-500">{Math.abs(balance).toLocaleString()} kcal オーバー ⚠️</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">このペースなら月に約 {monthlyKg}kg 増</p>
                 </div>
               ) : (
                 <div className="bg-gray-50 rounded-xl px-4 py-2.5 text-center">

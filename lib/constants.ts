@@ -14,6 +14,13 @@ export function getActivityFactor(key: string | null | undefined): number {
   return ACTIVITY_LEVELS.find((a) => a.key === key)?.factor ?? 1.2;
 }
 
+/**
+ * ダイエットの1日の目標不足カロリー（kcal）。
+ * 消費からこの分を引いた「目標ライン」を下回って初めて「ダイエットペース達成」とみなす。
+ * 500kcal/日 ≒ 週0.5kgの健康的な減量ペース。
+ */
+export const DAILY_TARGET_DEFICIT = 500;
+
 export const BACKUP_KEYS = [
   "wm_profile",
   "wm_records",

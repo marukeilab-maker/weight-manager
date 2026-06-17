@@ -4,7 +4,7 @@ import { X, ChevronLeft, ChevronRight, ClipboardList, Star } from "lucide-react"
 import { getMealRecord, saveMealRecord, getProfile, getWeightRecords, getAllExercises, getAllMeals } from "@/lib/storage";
 import { today, addDays, calcBMR, calcAge } from "@/lib/calculations";
 import { searchFoods, FoodItem } from "@/lib/foodDatabase";
-import { getActivityFactor } from "@/lib/constants";
+import { getActivityFactor, DAILY_TARGET_DEFICIT } from "@/lib/constants";
 import { calcDailyExpenditure } from "@/lib/energy";
 import { MealRecord } from "@/lib/types";
 
@@ -395,11 +395,15 @@ export default function MealsPage() {
           const totalBurned = energy.burned;
           const balance = totalBurned - totalAll;
           const isDeficit = balance >= 0;
+          const achieved = balance >= DAILY_TARGET_DEFICIT; // 目標ペース達成
+          const overMaintenance = balance < 0;              // 維持超え（太る方向）
+          const targetLine = Math.max(0, totalBurned - DAILY_TARGET_DEFICIT);
           // 理論値表示中に、体重が増加傾向なのに「不足」と出ている矛盾を検知
           const trendContradicts = !isAdaptive && isDeficit && energy.recentTrendKgPerWeek != null && energy.recentTrendKgPerWeek > 0.1;
           const maxVal = Math.max(totalBurned, totalAll, 1);
           const burnedPct = Math.min(100, (totalBurned / maxVal) * 100);
           const intakePct = Math.min(100, (totalAll / maxVal) * 100);
+          const targetPct = Math.min(100, (targetLine / maxVal) * 100);
           return (
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <p className="text-xs font-black text-gray-400 mb-3">カロリー収支</p>
@@ -416,12 +420,13 @@ export default function MealsPage() {
                 </div>
                 <div>
                   <div className="flex justify-between text-xs font-bold text-gray-500 mb-1">
-                    <span>🍽️ 摂取（食事）</span>
+                    <span>🍽️ 摂取（食事）<span className="text-gray-400 text-[10px] font-normal">目標 {targetLine.toLocaleString()}まで</span></span>
                     <span className="text-orange-500">{totalAll} kcal</span>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2.5">
-                    <div className={`h-2.5 rounded-full transition-all duration-500 ${isDeficit ? "bg-gradient-to-r from-orange-300 to-orange-400" : "bg-gradient-to-r from-orange-400 to-red-500"}`}
+                  <div className="relative w-full bg-gray-100 rounded-full h-2.5">
+                    <div className={`h-2.5 rounded-full transition-all duration-500 ${achieved ? "bg-gradient-to-r from-orange-300 to-orange-400" : "bg-gradient-to-r from-orange-400 to-red-500"}`}
                       style={{ width: `${intakePct}%` }} />
+                    <div className="absolute top-[-2px] bottom-[-2px] w-0.5 bg-teal-600" style={{ left: `${targetPct}%` }} />
                   </div>
                 </div>
               </div>
@@ -429,14 +434,20 @@ export default function MealsPage() {
                 <div className="rounded-xl px-3 py-2 bg-amber-50 text-center">
                   <span className="text-xs font-black text-amber-600">体重は増加傾向です ⚠️ 消費は目安のため高めの可能性あり</span>
                 </div>
+              ) : achieved ? (
+                <div className="rounded-xl px-3 py-2 flex items-center justify-between bg-teal-50">
+                  <span className="text-xs font-black text-teal-600">🎉 ダイエットペース達成</span>
+                  <span className="text-sm font-black text-teal-600">−{Math.round(balance)} kcal</span>
+                </div>
+              ) : !overMaintenance ? (
+                <div className="rounded-xl px-3 py-2 flex items-center justify-between bg-amber-50">
+                  <span className="text-xs font-black text-amber-600">あと {Math.round(DAILY_TARGET_DEFICIT - balance)} kcal でペース達成</span>
+                  <span className="text-sm font-black text-amber-600">−{Math.round(balance)} kcal</span>
+                </div>
               ) : (
-                <div className={`rounded-xl px-3 py-2 flex items-center justify-between ${isDeficit ? "bg-teal-50" : "bg-red-50"}`}>
-                  <span className={`text-xs font-black ${isDeficit ? "text-teal-600" : "text-red-500"}`}>
-                    {isDeficit ? "✅ 収支" : "⚠️ 収支"}
-                  </span>
-                  <span className={`text-sm font-black ${isDeficit ? "text-teal-600" : "text-red-500"}`}>
-                    {isDeficit ? `−${Math.round(balance)} kcal` : `+${Math.round(Math.abs(balance))} kcal オーバー`}
-                  </span>
+                <div className="rounded-xl px-3 py-2 flex items-center justify-between bg-red-50">
+                  <span className="text-xs font-black text-red-500">⚠️ オーバー</span>
+                  <span className="text-sm font-black text-red-500">+{Math.round(Math.abs(balance))} kcal</span>
                 </div>
               )}
               {isAdaptive && energy.adaptive ? (
