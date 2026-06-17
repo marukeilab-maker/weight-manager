@@ -17,6 +17,7 @@ import { getProfile, getMealRecord, getExerciseRecord, getAllMeals } from "@/lib
 import { calcBMR, calcAge } from "@/lib/calculations";
 import { getActivityFactor } from "@/lib/constants";
 import { calcChartMaintenance } from "@/lib/energy";
+import { DAILY_TARGET_DEFICIT } from "@/lib/constants";
 
 type Range = "week" | "month" | "all";
 
@@ -273,6 +274,17 @@ export default function WeightChart({ records, goalWeight, showCaloriesOption = 
             {canShowCalories && showCalories && (
               <ReferenceLine yAxisId="calorie" y={0} stroke="#94a3b8" strokeDasharray="2 2" strokeWidth={1} />
             )}
+            {/* ダイエット目標ライン（消費 −500kcal＝この線より下なら痩せるペース達成） */}
+            {canShowCalories && showCalories && (
+              <ReferenceLine
+                yAxisId="calorie"
+                y={-DAILY_TARGET_DEFICIT}
+                stroke="#0d9488"
+                strokeDasharray="4 3"
+                strokeWidth={1.5}
+                label={{ value: "目標", position: "insideBottomRight", fontSize: 9, fill: "#0d9488" }}
+              />
+            )}
 
             {/* 体重ライン（実測・脇役） */}
             <Line
@@ -339,6 +351,12 @@ export default function WeightChart({ records, goalWeight, showCaloriesOption = 
                   <span className="w-2 h-2.5 rounded-sm bg-red-300 ml-0.5" />
                 </span>
                 カロリー差（緑=不足 / 赤=過多）
+              </span>
+            )}
+            {canShowCalories && showCalories && (
+              <span className="flex items-center gap-1">
+                <span className="inline-block w-4 border-t-2 border-dashed border-teal-600" />
+                目標ライン（下回れば痩せるペース）
               </span>
             )}
           </div>
