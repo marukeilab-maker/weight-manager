@@ -6,6 +6,7 @@ import { getProfile, saveProfile, getWeightRecords, saveWeightRecord } from "@/l
 import { today, calcBMR, calcAge, daysBetween, addDays, calcBMI } from "@/lib/calculations";
 import { APP_VERSION } from "@/lib/version";
 import { BACKUP_KEYS, ACTIVITY_LEVELS, DAILY_TARGET_DEFICIT } from "@/lib/constants";
+import { validateBackup } from "@/lib/backupValidation";
 import BirthdateSelect from "@/components/BirthdateSelect";
 
 // 1ヶ月後の日付（ローカルタイム基準。toISOStringはUTCで日付がずれるため使わない）
@@ -27,6 +28,7 @@ export default function SettingsPage() {
   const [gender, setGender] = useState<"male" | "female">("male");
   const [saved, setSaved] = useState(false);
   const [importMsg, setImportMsg] = useState("");
+  const [importError, setImportError] = useState(false);
   const [lastBackup, setLastBackup] = useState<string | null>(null);
   const [activityLevel, setActivityLevel] = useState("low");
   const [currentWeight, setCurrentWeight] = useState<number | null>(null);
@@ -68,6 +70,12 @@ export default function SettingsPage() {
     reader.onload = (ev) => {
       try {
         const data = JSON.parse(ev.target?.result as string);
+        const check = validateBackup(data);
+        if (!check.ok) {
+          setImportError(true);
+          setImportMsg(check.reason);
+          return;
+        }
         BACKUP_KEYS.forEach((k) => {
           if (data[k] !== undefined) {
             const val = data[k];
@@ -75,9 +83,11 @@ export default function SettingsPage() {
             localStorage.setItem(k, typeof val === "string" ? val : JSON.stringify(val));
           }
         });
+        setImportError(false);
         setImportMsg("復元完了！再読み込みします…");
         setTimeout(() => window.location.reload(), 1200);
       } catch {
+        setImportError(true);
         setImportMsg("ファイルの形式が正しくありません");
       }
     };
@@ -655,7 +665,7 @@ export default function SettingsPage() {
             <Upload size={16} /> データをインポート（復元）
           </button>
           <input ref={importRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
-          {importMsg && <p className="text-xs text-center font-bold text-green-500">{importMsg}</p>}
+          {importMsg && <p className={`text-xs text-center font-bold ${importError ? "text-red-500" : "text-green-500"}`}>{importMsg}</p>}
         </div>
 
         <button

@@ -254,6 +254,85 @@ export default function MealsPage() {
   const currentDishes = slotDishes[activeSlot] ?? [];
   const slotTotal = currentDishes.reduce((s, d) => s + d.kcal, 0);
 
+  // よく使う料理＋手動追加（統合カード）。
+  // お気に入りがある人はページ上部（最短動線）、まだ空の人は従来通り下部に表示する。
+  const favoritesCard = (
+    <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+      <div className="px-4 pt-4 pb-1 flex items-center justify-between">
+        <p className="text-xs font-bold text-gray-500">⭐ よく使う料理</p>
+        <p className="text-[10px] text-gray-400">タップで追加</p>
+      </div>
+
+      {/* 料理リスト */}
+      {customHistory.length > 0 ? (
+        <div className="px-4 pb-3 space-y-1.5 mt-2">
+          {(showAllHistory ? customHistory : customHistory.slice(0, 6)).map((dish) => (
+            <div key={dish.name} className="flex items-center gap-2">
+              <button
+                onClick={() => addDish(dish)}
+                className={`flex-1 flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-all active:scale-95 ${
+                  flashDish === dish.name
+                    ? "bg-green-50 ring-2 ring-green-300"
+                    : "bg-orange-50 hover:bg-orange-100"
+                }`}
+              >
+                <span className="text-sm font-bold text-gray-700 truncate">{dish.name}</span>
+                <span className="text-orange-500 font-black text-sm ml-2 shrink-0">{dish.kcal} kcal</span>
+              </button>
+              <button
+                onClick={() => deleteFromHistory(dish.name)}
+                className="text-gray-300 hover:text-red-400 transition-colors p-1.5"
+                aria-label="削除"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+          {customHistory.length > 6 && (
+            <button
+              onClick={() => setShowAllHistory(v => !v)}
+              className="w-full text-xs text-gray-400 font-bold py-1.5 hover:text-gray-600 transition-colors"
+            >
+              {showAllHistory ? "▲ 閉じる" : `▼ もっと見る（あと${customHistory.length - 6}件）`}
+            </button>
+          )}
+        </div>
+      ) : (
+        <p className="text-xs text-gray-400 text-center py-4">検索結果や記録した料理の ★ を押すと、ここに登録されます</p>
+      )}
+
+      {/* 区切り線＋追加フォーム */}
+      <div className="border-t border-gray-100 px-4 py-3">
+        <p className="text-[10px] font-bold text-gray-400 mb-2">✏️ 新しく追加</p>
+        <div className="flex gap-2 mb-2">
+          <input
+            type="text"
+            value={customName}
+            onChange={(e) => setCustomName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addCustomDish()}
+            placeholder="料理名（任意）"
+            className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-orange-400 transition-colors"
+          />
+          <input
+            type="number"
+            value={customKcal}
+            onChange={(e) => setCustomKcal(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addCustomDish()}
+            placeholder="kcal"
+            className="w-20 border-2 border-gray-200 rounded-xl px-2 py-2 text-sm font-bold text-center outline-none focus:border-orange-400 transition-colors"
+          />
+        </div>
+        <button
+          onClick={addCustomDish}
+          disabled={!customKcal || Number(customKcal) <= 0}
+          className="w-full py-2.5 bg-gradient-to-r from-orange-400 to-pink-500 text-white font-bold rounded-xl disabled:opacity-40 active:scale-95 transition-all text-sm"
+        >
+          追加する
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="pb-20 bg-gray-50 min-h-screen">
 
@@ -521,6 +600,9 @@ export default function MealsPage() {
           </button>
         )}
 
+        {/* ── よく使う料理（登録がある人は最短動線としてここに表示） ── */}
+        {customHistory.length > 0 && favoritesCard}
+
         {/* ── ざっくり入力 ── */}
         <div className="bg-white rounded-2xl shadow-lg p-4">
           <p className="text-xs font-bold text-gray-500 mb-1">⚡ ざっくり入力（ワンタップ）</p>
@@ -569,37 +651,47 @@ export default function MealsPage() {
 
           {browseCategory && (
             <div className="mt-3 border border-gray-100 rounded-xl overflow-hidden max-h-72 overflow-y-auto">
-              {getFoodsByCategory(browseCategory).map((item, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center border-b border-gray-50 last:border-0 transition-colors ${
-                    flashDish === item.name ? "bg-green-50" : "hover:bg-orange-50"
-                  }`}
-                >
-                  <button
-                    onClick={() => addDish({ name: item.name, kcal: item.kcal })}
-                    className="flex-1 flex items-center px-3 py-2.5 text-left active:bg-orange-100 transition-colors"
-                  >
-                    <span className="flex-1 text-sm font-bold text-gray-800">{item.name}</span>
-                    {flashDish === item.name
-                      ? <span className="text-green-500 font-black text-sm">✓ 追加</span>
-                      : <><span className="text-orange-500 font-black text-sm mr-1">{item.kcal}</span>
-                         <span className="text-gray-400 text-xs">kcal</span></>
-                    }
-                  </button>
-                  <button
-                    onClick={() => toggleFavorite({ name: item.name, kcal: item.kcal })}
-                    className="p-2.5 transition-colors"
-                    aria-label="お気に入り"
-                  >
-                    <Star
-                      size={16}
-                      className={isFavorite(item.name) ? "text-amber-400" : "text-gray-300"}
-                      fill={isFavorite(item.name) ? "currentColor" : "none"}
-                    />
-                  </button>
-                </div>
-              ))}
+              {(() => {
+                const foods = getFoodsByCategory(browseCategory);
+                return foods.map((item, i) => (
+                  <div key={i}>
+                    {/* サブグループ見出し（丼もの・寿司など。切り替わる位置にだけ挿入） */}
+                    {item.sub && item.sub !== foods[i - 1]?.sub && (
+                      <div className="sticky top-0 z-10 bg-orange-50/95 backdrop-blur-sm px-3 py-1.5 text-[10px] font-black text-orange-400 border-b border-orange-100">
+                        {item.sub}
+                      </div>
+                    )}
+                    <div
+                      className={`flex items-center border-b border-gray-50 last:border-0 transition-colors ${
+                        flashDish === item.name ? "bg-green-50" : "hover:bg-orange-50"
+                      }`}
+                    >
+                      <button
+                        onClick={() => addDish({ name: item.name, kcal: item.kcal })}
+                        className="flex-1 flex items-center px-3 py-2.5 text-left active:bg-orange-100 transition-colors"
+                      >
+                        <span className="flex-1 text-sm font-bold text-gray-800">{item.name}</span>
+                        {flashDish === item.name
+                          ? <span className="text-green-500 font-black text-sm">✓ 追加</span>
+                          : <><span className="text-orange-500 font-black text-sm mr-1">{item.kcal}</span>
+                             <span className="text-gray-400 text-xs">kcal</span></>
+                        }
+                      </button>
+                      <button
+                        onClick={() => toggleFavorite({ name: item.name, kcal: item.kcal })}
+                        className="p-2.5 transition-colors"
+                        aria-label="お気に入り"
+                      >
+                        <Star
+                          size={16}
+                          className={isFavorite(item.name) ? "text-amber-400" : "text-gray-300"}
+                          fill={isFavorite(item.name) ? "currentColor" : "none"}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
           )}
         </div>
@@ -669,81 +761,8 @@ export default function MealsPage() {
           )}
         </div>
 
-        {/* ── よく使う料理 ＋ 手動追加（統合カード） ── */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          <div className="px-4 pt-4 pb-1 flex items-center justify-between">
-            <p className="text-xs font-bold text-gray-500">⭐ よく使う料理</p>
-            <p className="text-[10px] text-gray-400">タップで追加</p>
-          </div>
-
-          {/* 料理リスト */}
-          {customHistory.length > 0 ? (
-            <div className="px-4 pb-3 space-y-1.5 mt-2">
-              {(showAllHistory ? customHistory : customHistory.slice(0, 6)).map((dish) => (
-                <div key={dish.name} className="flex items-center gap-2">
-                  <button
-                    onClick={() => addDish(dish)}
-                    className={`flex-1 flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-all active:scale-95 ${
-                      flashDish === dish.name
-                        ? "bg-green-50 ring-2 ring-green-300"
-                        : "bg-orange-50 hover:bg-orange-100"
-                    }`}
-                  >
-                    <span className="text-sm font-bold text-gray-700 truncate">{dish.name}</span>
-                    <span className="text-orange-500 font-black text-sm ml-2 shrink-0">{dish.kcal} kcal</span>
-                  </button>
-                  <button
-                    onClick={() => deleteFromHistory(dish.name)}
-                    className="text-gray-300 hover:text-red-400 transition-colors p-1.5"
-                    aria-label="削除"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
-              {customHistory.length > 6 && (
-                <button
-                  onClick={() => setShowAllHistory(v => !v)}
-                  className="w-full text-xs text-gray-400 font-bold py-1.5 hover:text-gray-600 transition-colors"
-                >
-                  {showAllHistory ? "▲ 閉じる" : `▼ もっと見る（あと${customHistory.length - 6}件）`}
-                </button>
-              )}
-            </div>
-          ) : (
-            <p className="text-xs text-gray-400 text-center py-4">検索結果や記録した料理の ★ を押すと、ここに登録されます</p>
-          )}
-
-          {/* 区切り線＋追加フォーム */}
-          <div className="border-t border-gray-100 px-4 py-3">
-            <p className="text-[10px] font-bold text-gray-400 mb-2">✏️ 新しく追加</p>
-            <div className="flex gap-2 mb-2">
-              <input
-                type="text"
-                value={customName}
-                onChange={(e) => setCustomName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addCustomDish()}
-                placeholder="料理名（任意）"
-                className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-orange-400 transition-colors"
-              />
-              <input
-                type="number"
-                value={customKcal}
-                onChange={(e) => setCustomKcal(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addCustomDish()}
-                placeholder="kcal"
-                className="w-20 border-2 border-gray-200 rounded-xl px-2 py-2 text-sm font-bold text-center outline-none focus:border-orange-400 transition-colors"
-              />
-            </div>
-            <button
-              onClick={addCustomDish}
-              disabled={!customKcal || Number(customKcal) <= 0}
-              className="w-full py-2.5 bg-gradient-to-r from-orange-400 to-pink-500 text-white font-bold rounded-xl disabled:opacity-40 active:scale-95 transition-all text-sm"
-            >
-              追加する
-            </button>
-          </div>
-        </div>
+        {/* ── よく使う料理（まだ空のユーザーにはここに表示） ── */}
+        {customHistory.length === 0 && favoritesCard}
 
 
         {/* ── 選択中の料理一覧 ── */}
