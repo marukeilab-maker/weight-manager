@@ -59,7 +59,7 @@ export function calcBurnedCalories(met: number, weightKg: number, minutes: numbe
 }
 
 export function calcAge(birthdate: string): number {
-  const birth = new Date(birthdate);
+  const birth = new Date(birthdate + "T00:00:00");
   const now = new Date();
   let age = now.getFullYear() - birth.getFullYear();
   const m = now.getMonth() - birth.getMonth();

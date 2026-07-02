@@ -247,6 +247,8 @@ export const BACKUP_KEYS = [
   "wm_custom_food_history",
   "wm_show_meal_exercise",
   "wm_activity_level",
+  "wm_maintenance",
+  "wm_goal_celebrated",
 ] as const;
 ```
 
