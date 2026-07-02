@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { X, ChevronLeft, ChevronRight, ClipboardList, Star } from "lucide-react";
 import { getMealRecord, saveMealRecord, getProfile, getWeightRecords, getAllExercises, getAllMeals } from "@/lib/storage";
 import { today, addDays, calcBMR, calcAge } from "@/lib/calculations";
-import { searchFoods, FoodItem } from "@/lib/foodDatabase";
+import { searchFoods, FoodItem, FOOD_CATEGORIES, getFoodsByCategory } from "@/lib/foodDatabase";
 import { getActivityFactor, DAILY_TARGET_DEFICIT } from "@/lib/constants";
 import { calcDailyExpenditure } from "@/lib/energy";
 import { MealRecord } from "@/lib/types";
@@ -81,6 +81,7 @@ export default function MealsPage() {
   const [customHistory, setCustomHistory] = useState<Dish[]>([]);
   const [targetCalories, setTargetCalories] = useState<number>(0);
   const [showAllHistory, setShowAllHistory] = useState(false);
+  const [browseCategory, setBrowseCategory] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const isAutoDateRef = useRef(true);  // 自動日付モード（手動変更後はfalseに）
 
@@ -543,10 +544,70 @@ export default function MealsPage() {
           </div>
         </div>
 
+        {/* ── カテゴリから選ぶ（検索せずワンタップ） ── */}
+        <div className="bg-white rounded-2xl shadow-lg p-4">
+          <p className="text-xs font-bold text-gray-500 mb-1">📂 カテゴリから選ぶ</p>
+          <p className="text-[10px] text-gray-400 mb-3">検索しなくてOK。ジャンルをタップ → 食べたものをタップで記録</p>
+          <div className="flex flex-wrap gap-2">
+            {FOOD_CATEGORIES.map((cat) => {
+              const active = browseCategory === cat.key;
+              return (
+                <button
+                  key={cat.key}
+                  onClick={() => setBrowseCategory(active ? null : cat.key)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 ${
+                    active
+                      ? "bg-gradient-to-r from-orange-400 to-pink-500 text-white shadow"
+                      : "bg-gray-50 text-gray-600 hover:bg-orange-50"
+                  }`}
+                >
+                  {cat.emoji} {cat.key}
+                </button>
+              );
+            })}
+          </div>
+
+          {browseCategory && (
+            <div className="mt-3 border border-gray-100 rounded-xl overflow-hidden max-h-72 overflow-y-auto">
+              {getFoodsByCategory(browseCategory).map((item, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center border-b border-gray-50 last:border-0 transition-colors ${
+                    flashDish === item.name ? "bg-green-50" : "hover:bg-orange-50"
+                  }`}
+                >
+                  <button
+                    onClick={() => addDish({ name: item.name, kcal: item.kcal })}
+                    className="flex-1 flex items-center px-3 py-2.5 text-left active:bg-orange-100 transition-colors"
+                  >
+                    <span className="flex-1 text-sm font-bold text-gray-800">{item.name}</span>
+                    {flashDish === item.name
+                      ? <span className="text-green-500 font-black text-sm">✓ 追加</span>
+                      : <><span className="text-orange-500 font-black text-sm mr-1">{item.kcal}</span>
+                         <span className="text-gray-400 text-xs">kcal</span></>
+                    }
+                  </button>
+                  <button
+                    onClick={() => toggleFavorite({ name: item.name, kcal: item.kcal })}
+                    className="p-2.5 transition-colors"
+                    aria-label="お気に入り"
+                  >
+                    <Star
+                      size={16}
+                      className={isFavorite(item.name) ? "text-amber-400" : "text-gray-300"}
+                      fill={isFavorite(item.name) ? "currentColor" : "none"}
+                    />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* ── 食品検索 ── */}
         <div className="bg-white rounded-2xl shadow-lg p-4">
           <p className="text-xs font-bold text-gray-500 mb-1">🔍 食品を検索して追加</p>
-          <p className="text-[10px] text-gray-400 mb-3">和食・洋食・お菓子・スーパー惣菜・ファストフード・コンビニ・飲み物など700種以上</p>
+          <p className="text-[10px] text-gray-400 mb-3">和食・洋食・中華・韓国エスニック・お菓子・スーパー惣菜・ファストフード・コンビニ・飲み物など850種以上</p>
           <div className="relative mb-2">
             <input
               type="text"
