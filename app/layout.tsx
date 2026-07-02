@@ -3,6 +3,7 @@ import { Geist, Bebas_Neue } from "next/font/google";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import SwipeNavigator from "@/components/SwipeNavigator";
+import NativeStorageSync from "@/components/NativeStorageSync";
 
 const geist = Geist({ subsets: ["latin"] });
 const bebasNeue = Bebas_Neue({ weight: "400", subsets: ["latin"], variable: "--font-bebas" });
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-gray-50 max-w-md mx-auto min-h-screen">
         {children}
+        <NativeStorageSync />
         <SwipeNavigator />
         <BottomNav />
       </body>

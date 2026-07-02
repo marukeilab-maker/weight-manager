@@ -259,6 +259,18 @@ export const BACKUP_KEYS = [
 
 ---
 
+## ネイティブ版のデータ保護（localStorage → Preferences ミラー）
+
+iOSネイティブ版ではWKWebViewのlocalStorageがOSに削除されることがあるため、
+`lib/nativePersist.ts` が全アプリデータを Capacitor Preferences（UserDefaults）へ自動ミラーする。
+
+- 起点は `components/NativeStorageSync.tsx`（layout.tsxでマウント）。**Web/PWAでは何もしない**
+- ミラー対象は `BACKUP_KEYS` ＋ `wm_last_backup`。新キー追加時は `BACKUP_KEYS` に入れれば自動で対象になる
+- 起動時にlocalStorageが消えていればPreferencesから復元し、一度だけリロードする
+- `localStorage.clear()`（全リセット）はPreferences側も消える設計。これを壊さないこと
+
+---
+
 ## iOS / Capacitor ビルド
 
 **App情報**:
