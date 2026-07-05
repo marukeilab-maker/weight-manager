@@ -156,6 +156,20 @@ export const FOOD_DATABASE: FoodItem[] = [
   { name: "キムチ鍋", kcal: 500, category: "和食", sub: "粉もの・鍋・その他" },
   { name: "ちゃんこ鍋", kcal: 550, category: "和食", sub: "粉もの・鍋・その他" },
   { name: "焼き鳥盛り合わせ（5本）", kcal: 350, category: "和食", sub: "粉もの・鍋・その他" },
+  // そうめん・冷たい麺
+  { name: "そうめん（1人前）", kcal: 340, category: "和食", sub: "そうめん・冷たい麺" },
+  { name: "ぶっかけそうめん（具入り）", kcal: 400, category: "和食", sub: "そうめん・冷たい麺" },
+  { name: "にゅうめん", kcal: 300, category: "和食", sub: "そうめん・冷たい麺" },
+  { name: "冷や汁", kcal: 150, category: "和食", sub: "そうめん・冷たい麺" },
+  { name: "冷や汁定食", kcal: 550, category: "和食", sub: "そうめん・冷たい麺" },
+  // 沖縄料理
+  { name: "沖縄そば", kcal: 450, category: "和食", sub: "沖縄料理" },
+  { name: "ソーキそば", kcal: 520, category: "和食", sub: "沖縄料理" },
+  { name: "ゴーヤチャンプルー", kcal: 280, category: "和食", sub: "沖縄料理" },
+  { name: "ゴーヤチャンプルー定食", kcal: 650, category: "和食", sub: "沖縄料理" },
+  { name: "タコライス", kcal: 600, category: "和食", sub: "沖縄料理" },
+  { name: "ラフテー（1人前）", kcal: 350, category: "和食", sub: "沖縄料理" },
+  { name: "ジューシー（沖縄風炊き込みご飯）", kcal: 250, category: "和食", sub: "沖縄料理" },
 
   // ══ 洋食 ════════════════════════════════════
   { name: "ハンバーグ定食", kcal: 850, category: "洋食" },
@@ -223,6 +237,9 @@ export const FOOD_DATABASE: FoodItem[] = [
   { name: "フレンチトースト", kcal: 380, category: "洋食" },
   { name: "パンケーキ（2枚）", kcal: 420, category: "洋食" },
 
+  { name: "冷製パスタ（トマト）", kcal: 450, category: "洋食" },
+  { name: "ビシソワーズ（冷製スープ）", kcal: 150, category: "洋食" },
+
   // ══ 中華 ════════════════════════════════════
   { name: "焼き餃子（6個）", kcal: 280, category: "中華" },
   { name: "水餃子（6個）", kcal: 200, category: "中華" },
@@ -268,6 +285,8 @@ export const FOOD_DATABASE: FoodItem[] = [
   { name: "皿うどん（揚げ）", kcal: 700, category: "中華" },
   { name: "あんかけ焼きそば", kcal: 600, category: "中華" },
   { name: "台湾まぜそば", kcal: 750, category: "中華" },
+  { name: "冷やし中華（ごまだれ）", kcal: 590, category: "中華" },
+  { name: "冷やし坦々麺", kcal: 650, category: "中華" },
 
   // ══ 韓国・エスニック ══════════════════════════
   { name: "ビビンバ", kcal: 650, category: "韓国・エスニック" },
@@ -650,6 +669,7 @@ export const FOOD_DATABASE: FoodItem[] = [
   { name: "ほうれん草のソテー", kcal: 80, category: "サラダ・野菜" },
   { name: "野菜炒め", kcal: 150, category: "サラダ・野菜" },
   { name: "温野菜（蒸し野菜）", kcal: 120, category: "サラダ・野菜" },
+  { name: "とうもろこし（1本）", kcal: 140, category: "サラダ・野菜" },
   { name: "ブロッコリー（1房）", kcal: 30, category: "サラダ・野菜" },
 
   // ══ 肉・魚（食材 100g など）════════════════════
@@ -781,6 +801,8 @@ export const FOOD_DATABASE: FoodItem[] = [
   { name: "羊羹（1切れ）", kcal: 150, category: "お菓子", sub: "和菓子" },
   { name: "水羊羹（1個）", kcal: 110, category: "お菓子", sub: "和菓子" },
   { name: "わらび餅（1人前）", kcal: 160, category: "お菓子", sub: "和菓子" },
+  { name: "水ようかん（1個）", kcal: 120, category: "お菓子", sub: "和菓子" },
+  { name: "サーターアンダギー（1個）", kcal: 160, category: "お菓子", sub: "和菓子" },
   { name: "くずもち（1人前）", kcal: 140, category: "お菓子", sub: "和菓子" },
   { name: "あんみつ", kcal: 220, category: "お菓子", sub: "和菓子" },
   { name: "みつ豆", kcal: 180, category: "お菓子", sub: "和菓子" },
@@ -840,6 +862,8 @@ export const FOOD_DATABASE: FoodItem[] = [
   { name: "アイスクリーム（チョコ）", kcal: 200, category: "お菓子", sub: "アイス" },
   { name: "ジェラート（1個）", kcal: 170, category: "お菓子", sub: "アイス" },
   { name: "かき氷（シロップ）", kcal: 120, category: "お菓子", sub: "アイス" },
+  { name: "かき氷（宇治金時）", kcal: 260, category: "お菓子", sub: "アイス" },
+  { name: "かき氷（練乳いちご）", kcal: 220, category: "お菓子", sub: "アイス" },
   { name: "アイスモナカ（1個）", kcal: 230, category: "お菓子", sub: "アイス" },
   { name: "アイスバー（1本）", kcal: 110, category: "お菓子", sub: "アイス" },
   { name: "ガリガリ君（1本）", kcal: 70, category: "お菓子", sub: "アイス" },
@@ -891,6 +915,7 @@ export const FOOD_DATABASE: FoodItem[] = [
   { name: "りんごジュース（200ml）", kcal: 90, category: "飲み物", sub: "炭酸・ジュース" },
   { name: "ぶどうジュース（200ml）", kcal: 100, category: "飲み物", sub: "炭酸・ジュース" },
   { name: "トマトジュース（200ml）", kcal: 40, category: "飲み物", sub: "炭酸・ジュース" },
+  { name: "ラムネ（瓶1本）", kcal: 80, category: "飲み物", sub: "炭酸・ジュース" },
   { name: "野菜ジュース（200ml）", kcal: 70, category: "飲み物", sub: "炭酸・ジュース" },
   // 乳・植物性飲料
   { name: "牛乳（200ml）", kcal: 135, category: "飲み物", sub: "乳・植物性飲料" },

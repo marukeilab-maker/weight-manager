@@ -708,7 +708,7 @@ export default function MealsPage() {
         {/* ── 食品検索 ── */}
         <div className="bg-white rounded-2xl shadow-lg p-4">
           <p className="text-xs font-bold text-gray-500 mb-1">🔍 食品を検索して追加</p>
-          <p className="text-[10px] text-gray-400 mb-3">和食・洋食・中華・韓国エスニック・お菓子・スーパー惣菜・ファストフード・コンビニ・飲み物など850種以上</p>
+          <p className="text-[10px] text-gray-400 mb-3">和食・洋食・中華・韓国エスニック・お菓子・スーパー惣菜・ファストフード・コンビニ・飲み物など880種以上</p>
           <div className="relative mb-2">
             <input
               type="text"
