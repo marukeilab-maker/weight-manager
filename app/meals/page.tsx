@@ -84,6 +84,13 @@ export default function MealsPage() {
   const [browseCategory, setBrowseCategory] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const isAutoDateRef = useRef(true);  // 自動日付モード（手動変更後はfalseに）
+  const isAutoSlotRef = useRef(true);  // 自動スロットモード（手動選択後はfalseに。勝手に切り替わって誤記録するのを防ぐ）
+
+  // 手動でスロットを選択（自動切り替えを停止）
+  const selectSlot = (s: MealSlot) => {
+    isAutoSlotRef.current = false;
+    setSlot(s);
+  };
 
   // 手動で日付を変更（自動更新を停止）
   const changeDate = (d: string) => {
@@ -109,7 +116,10 @@ export default function MealsPage() {
       if (isAutoDateRef.current) {
         setDate(today());
       }
-      setSlot(getSlotByTime());
+      // 手動でスロットを選んでいる間は自動切り替えしない（誤記録防止）
+      if (isAutoSlotRef.current) {
+        setSlot(getSlotByTime());
+      }
     };
     const timer = setInterval(update, 60000);
     document.addEventListener("visibilitychange", update);
@@ -547,7 +557,7 @@ export default function MealsPage() {
             return (
               <button
                 key={sl.key}
-                onClick={() => setSlot(sl.key)}
+                onClick={() => selectSlot(sl.key)}
                 className={`rounded-2xl py-3 px-1 text-center transition-all active:scale-95 ${
                   active ? `bg-gradient-to-br ${sl.grad} shadow-md` : "bg-white shadow"
                 }`}
@@ -581,6 +591,42 @@ export default function MealsPage() {
             >
               🚫 この{SLOTS.find(s => s.key === activeSlot)?.label}を抜く
             </button>
+          </div>
+        )}
+
+        {/* ── 選択中の料理一覧（追加の結果がすぐ見えるよう最上部に配置） ── */}
+        {currentDishes.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-gray-50 flex items-center justify-between">
+              <p className="text-xs font-bold text-gray-500">
+                {SLOTS.find(s => s.key === activeSlot)?.icon} {SLOTS.find(s => s.key === activeSlot)?.label}の記録
+              </p>
+              <p className="text-orange-500 font-black text-sm">{slotTotal} kcal</p>
+            </div>
+            {currentDishes.map((dish, i) => (
+              <div key={i} className="flex items-center px-4 py-2.5 border-b border-gray-50 last:border-0">
+                <div className="flex-1">
+                  <span className="text-sm font-bold text-gray-700">{dish.name}</span>
+                </div>
+                <span className="text-orange-500 font-bold text-sm mr-1">{dish.kcal} kcal</span>
+                {dish.name !== "食事抜き" && (
+                  <button
+                    onClick={() => toggleFavorite(dish)}
+                    className="p-1.5 transition-colors"
+                    aria-label="お気に入り"
+                  >
+                    <Star
+                      size={15}
+                      className={isFavorite(dish.name) ? "text-amber-400" : "text-gray-300"}
+                      fill={isFavorite(dish.name) ? "currentColor" : "none"}
+                    />
+                  </button>
+                )}
+                <button onClick={() => removeDish(i)} className="text-gray-300 hover:text-red-400 transition-colors p-1.5">
+                  <X size={16} />
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
@@ -764,42 +810,6 @@ export default function MealsPage() {
         {/* ── よく使う料理（まだ空のユーザーにはここに表示） ── */}
         {customHistory.length === 0 && favoritesCard}
 
-
-        {/* ── 選択中の料理一覧 ── */}
-        {currentDishes.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-gray-50 flex items-center justify-between">
-              <p className="text-xs font-bold text-gray-500">
-                {SLOTS.find(s => s.key === activeSlot)?.icon} {SLOTS.find(s => s.key === activeSlot)?.label}の記録
-              </p>
-              <p className="text-orange-500 font-black text-sm">{slotTotal} kcal</p>
-            </div>
-            {currentDishes.map((dish, i) => (
-              <div key={i} className="flex items-center px-4 py-2.5 border-b border-gray-50 last:border-0">
-                <div className="flex-1">
-                  <span className="text-sm font-bold text-gray-700">{dish.name}</span>
-                </div>
-                <span className="text-orange-500 font-bold text-sm mr-1">{dish.kcal} kcal</span>
-                {dish.name !== "食事抜き" && (
-                  <button
-                    onClick={() => toggleFavorite(dish)}
-                    className="p-1.5 transition-colors"
-                    aria-label="お気に入り"
-                  >
-                    <Star
-                      size={15}
-                      className={isFavorite(dish.name) ? "text-amber-400" : "text-gray-300"}
-                      fill={isFavorite(dish.name) ? "currentColor" : "none"}
-                    />
-                  </button>
-                )}
-                <button onClick={() => removeDish(i)} className="text-gray-300 hover:text-red-400 transition-colors p-1.5">
-                  <X size={16} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
 
         {/* フッターロゴ */}
         <div className="flex justify-center pt-5 pb-3">
