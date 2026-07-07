@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<!-- スクリーンショット撮影用のデモデータ投入ページ（一時ファイル・コミットしない） -->
+<html lang="ja">
+<head><meta charset="utf-8"><title>demo seed</title></head>
+<body>
+<script>
+(function () {
+  const today = new Date();
+  const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  const goal = new Date(today.getTime() + 120 * 86400000);
+  const profile = { height: 170, goalWeight: 65, goalDate: fmt(goal), notificationTime: "08:00", targetCalories: 1800, birthdate: "1985-04-10", gender: "male" };
+  const records = [], meals = [], exercises = [], dishes = {};
+  // 30日分：ゆるやかに減量が進んでいる気持ちいいグラフを作る
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(today.getTime() - i * 86400000);
+    const date = fmt(d);
+    const w = 70.8 - (29 - i) * 0.055 + Math.sin(i * 1.7) * 0.18;
+    records.push({ date, weight: Math.round(w * 10) / 10, bmi: Math.round((w / (1.7 * 1.7)) * 10) / 10 });
+    if (i % 6 !== 5) {
+      const snack = i % 3 === 0 ? 150 : 0;
+      meals.push({ date, breakfast: 420, lunch: 620, dinner: 680, snack });
+      dishes[date] = {
+        breakfast: [{ name: "納豆ごはん", kcal: 420 }],
+        lunch: [{ name: "鮭の塩焼き定食", kcal: 520 }, { name: "サラダ", kcal: 100 }],
+        dinner: [{ name: "豚の生姜焼き定食", kcal: 680 }]
+      };
+    }
+    if (i % 3 === 1) exercises.push({ date, entries: [{ type: "ウォーキング", minutes: 30, calories: 130, met: 3.5 }] });
+  }
+  // 今日の食事（朝食に2品入っている状態）
+  const t = fmt(today);
+  dishes[t] = { breakfast: [{ name: "納豆ごはん", kcal: 420 }, { name: "バナナ（1本）", kcal: 90 }] };
+  const todayMeal = meals.find((m) => m.date === t);
+  if (todayMeal) { todayMeal.breakfast = 510; todayMeal.lunch = 0; todayMeal.dinner = 0; todayMeal.snack = 0; }
+  else meals.push({ date: t, breakfast: 510, lunch: 0, dinner: 0, snack: 0 });
+
+  localStorage.setItem("wm_profile", JSON.stringify(profile));
+  localStorage.setItem("wm_records", JSON.stringify(records));
+  localStorage.setItem("wm_meals", JSON.stringify(meals));
+  localStorage.setItem("wm_exercises", JSON.stringify(exercises));
+  localStorage.setItem("wm_meal_dishes", JSON.stringify(dishes));
+  localStorage.setItem("wm_custom_food_history", JSON.stringify([
+    { name: "納豆ごはん", kcal: 420 },
+    { name: "プロテイン", kcal: 120 },
+    { name: "鮭の塩焼き定食", kcal: 520 }
+  ]));
+  localStorage.setItem("wm_activity_level", "light");
+  localStorage.setItem("wm_last_backup", t);
+  document.body.textContent = "seeded";
+})();
+</script>
+</body>
+</html>
