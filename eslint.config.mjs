@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Capacitor の iOS ビルド成果物（生成された minify 済みファイル群）
     "ios/**",
+    // App Storeスクリーンショット作成用のNodeスクリプト（アプリ本体ではない）
+    "screenshot-kit/**",
   ]),
   {
     rules: {

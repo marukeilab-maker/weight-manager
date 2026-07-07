@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { X, ChevronLeft, ChevronRight, ClipboardList, Star } from "lucide-react";
 import { getMealRecord, saveMealRecord, getProfile, getWeightRecords, getAllExercises, getAllMeals } from "@/lib/storage";
-import { today, addDays, calcBMR, calcAge } from "@/lib/calculations";
+import { today, addDays, calcBMR, calcAge, formatDate } from "@/lib/calculations";
 import { searchFoods, FoodItem, FOOD_CATEGORIES, getFoodsByCategory } from "@/lib/foodDatabase";
 import { getActivityFactor, DAILY_TARGET_DEFICIT } from "@/lib/constants";
 import { calcDailyExpenditure } from "@/lib/energy";
@@ -206,12 +206,22 @@ export default function MealsPage() {
     addDish({ name: `${label}（ざっくり）`, kcal });
   }
 
-  // 昨日と同じ料理をコピー（重複防止のため現在の内容を置き換え）
+  // 直近7日以内で、同じスロットに料理の記録がある最新の日を探す
+  // （昨日だけだと1日サボるとボタンが消えてしまうため）
+  function findLastDishDay(): { date: string; dishes: Dish[]; daysAgo: number } | null {
+    for (let i = 1; i <= 7; i++) {
+      const d = addDays(date, -i);
+      const dishes = (loadSlotDishes(d)[activeSlot] ?? []).filter((x) => x.name !== "食事抜き");
+      if (dishes.length > 0) return { date: d, dishes, daysAgo: i };
+    }
+    return null;
+  }
+
+  // 前回と同じ料理をコピー（重複防止のため現在の内容を置き換え）
   function copyFromYesterday() {
-    const yesterday = addDays(date, -1);
-    const yesterdayDishes = (loadSlotDishes(yesterday)[activeSlot] ?? []).filter(d => d.name !== "食事抜き");
-    if (yesterdayDishes.length === 0) return;
-    const merged = [...yesterdayDishes];
+    const last = findLastDishDay();
+    if (!last) return;
+    const merged = [...last.dishes];
     const updated = { ...slotDishes, [activeSlot]: merged };
     setSlotDishes(updated);
     saveSlotDishes(date, updated);
@@ -221,12 +231,6 @@ export default function MealsPage() {
     saveMealRecord(newMeal);
     setFlashDish("昨日と同じ");
     setTimeout(() => setFlashDish(null), 1000);
-  }
-
-  // 昨日の同スロットに料理があるか
-  function yesterdayDishCount(): number {
-    const yesterday = addDays(date, -1);
-    return (loadSlotDishes(yesterday)[activeSlot] ?? []).filter(d => d.name !== "食事抜き").length;
   }
 
   // 食事を抜く（スキップ）
@@ -593,21 +597,28 @@ export default function MealsPage() {
           </div>
         )}
 
-        {/* ── 昨日と同じ（目立つカラーボタン） ── */}
-        {yesterdayDishCount() > 0 && (
-          <button
-            onClick={copyFromYesterday}
-            className={`w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 ${
-              flashDish === "昨日と同じ"
-                ? "bg-green-400 text-white"
-                : "bg-gradient-to-r from-orange-400 to-pink-400 text-white"
-            }`}
-          >
-            <span className="text-lg">📋</span>
-            <span>昨日と同じものをコピー</span>
-            <span className="bg-white/20 text-white text-xs font-black px-1.5 py-0.5 rounded-full">{yesterdayDishCount()}品</span>
-          </button>
-        )}
+        {/* ── 前回と同じ（目立つカラーボタン。直近7日までさかのぼる） ── */}
+        {(() => {
+          const last = findLastDishDay();
+          if (!last) return null;
+          const label = last.daysAgo === 1
+            ? "昨日と同じものをコピー"
+            : `前回（${formatDate(last.date)}）と同じものをコピー`;
+          return (
+            <button
+              onClick={copyFromYesterday}
+              className={`w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 ${
+                flashDish === "昨日と同じ"
+                  ? "bg-green-400 text-white"
+                  : "bg-gradient-to-r from-orange-400 to-pink-400 text-white"
+              }`}
+            >
+              <span className="text-lg">📋</span>
+              <span>{label}</span>
+              <span className="bg-white/20 text-white text-xs font-black px-1.5 py-0.5 rounded-full">{last.dishes.length}品</span>
+            </button>
+          );
+        })()}
 
         {/* ── よく使う料理（登録がある人は最短動線としてここに表示） ── */}
         {customHistory.length > 0 && favoritesCard}
