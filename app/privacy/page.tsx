@@ -74,9 +74,9 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="font-black text-gray-800 mb-1">8. 課金・購入情報の取扱</h2>
+            <h2 className="font-black text-gray-800 mb-1">8. 料金・決済情報の取扱</h2>
             <p>
-              本アプリの購入および返金処理は Apple Inc.（App Store）が行います。当方が決済情報・クレジットカード情報・購入者の氏名・住所等を取得することはありません。返金のご相談は Apple へ直接お申し込みください（サポートページに案内があります）。
+              本アプリは完全無料で、アプリ内課金・サブスクリプションはありません。当方が決済情報・クレジットカード情報・氏名・住所等を取得することは一切ありません。App Store 上で身に覚えのない請求があった場合は、Apple Inc. のサポートページより直接お申し込みください。
             </p>
           </section>
 
