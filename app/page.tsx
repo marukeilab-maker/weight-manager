@@ -28,6 +28,7 @@ import {
 } from "@/lib/calculations";
 import { getDailyCatMessage } from "@/lib/catMessages";
 import { BACKUP_KEYS, getActivityFactor, DAILY_TARGET_DEFICIT } from "@/lib/constants";
+import { requestAppReview } from "@/lib/reviewPrompt";
 import { calcDailyExpenditure } from "@/lib/energy";
 import { Profile, WeightRecord } from "@/lib/types";
 
@@ -127,7 +128,15 @@ export default function HomePage() {
     if (!inMaintenance && w <= profile.goalWeight && celebrated !== String(profile.goalWeight)) {
       localStorage.setItem("wm_goal_celebrated", String(profile.goalWeight));
       setShowCelebration(true);
+      // 目標達成のお祝い画面はユーザーが閉じたタイミングでレビュー依頼する
       return; // お祝い画面を出すので紙吹雪はスキップ
+    }
+    // 連続記録が節目（7日・30日）に到達したら、満足度の高いタイミングでレビュー依頼（ネイティブのみ）
+    const streakDates = records.map((r) => r.date);
+    if (!streakDates.includes(record.date)) streakDates.push(record.date);
+    const newStreak = calcStreak(streakDates).current;
+    if (newStreak === 7 || newStreak === 30) {
+      void requestAppReview();
     }
     setSaved(true);
     setTimeout(() => setSaved(false), 5000);
@@ -140,6 +149,8 @@ export default function HomePage() {
     localStorage.setItem("wm_maintenance", JSON.stringify(data));
     setMaintenance(data);
     setShowCelebration(false);
+    // 目標達成直後＝満足度が高い瞬間。モーダルが閉じてからレビュー依頼（ネイティブのみ）
+    setTimeout(() => { void requestAppReview(); }, 800);
   }
 
   function handleBackup() {
@@ -235,7 +246,11 @@ export default function HomePage() {
             </button>
             <p className="text-[10px] text-gray-400 mb-2">リバウンド防止！達成した体重をキープするモード</p>
             <button
-              onClick={() => setShowCelebration(false)}
+              onClick={() => {
+                setShowCelebration(false);
+                // 目標達成直後の満足度が高い瞬間にレビュー依頼（ネイティブのみ）
+                setTimeout(() => { void requestAppReview(); }, 800);
+              }}
               className="text-xs text-gray-400 font-bold py-1"
             >
               あとで決める
