@@ -37,5 +37,39 @@ const BASE = "http://localhost:3001";
     await page.screenshot({ path: path.join(SHOT, `${t.name}.png`) });
     console.log(`captured: ${t.name}`);
   }
+
+  // 最小の<p>を見出しテキストで探して画面上部へスクロール
+  const scrollToHeading = (text) =>
+    page.evaluate((t) => {
+      const el = [...document.querySelectorAll("p")]
+        .filter((e) => e.textContent.trim().includes(t))
+        .sort((a, b) => a.textContent.length - b.textContent.length)[0];
+      if (el) window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 24);
+      return !!el;
+    }, text);
+
+  // 追加①: カテゴリ一覧（食品DBの豊富さ）
+  await page.goto(`${BASE}/meals`, { waitUntil: "networkidle0", timeout: 30000 }).catch(() => {});
+  await new Promise((r) => setTimeout(r, 2000));
+  console.log("  categories heading found:", await scrollToHeading("カテゴリから選ぶ"));
+  await new Promise((r) => setTimeout(r, 700));
+  await page.screenshot({ path: path.join(SHOT, "meals-categories.png") });
+  console.log("captured: meals-categories");
+
+  // 追加②: 検索結果（カフェメニューの充実）— 検索欄に「カフェ」を入力
+  await page.goto(`${BASE}/meals`, { waitUntil: "networkidle0", timeout: 30000 }).catch(() => {});
+  await new Promise((r) => setTimeout(r, 2000));
+  const input = await page.$('input[placeholder^="例："]');
+  console.log("  search input found:", !!input);
+  if (input) {
+    await input.click();
+    await input.type("カフェ", { delay: 40 });
+    await new Promise((r) => setTimeout(r, 900));
+    console.log("  search heading found:", await scrollToHeading("食品を検索して追加"));
+    await new Promise((r) => setTimeout(r, 600));
+  }
+  await page.screenshot({ path: path.join(SHOT, "meals-cafe.png") });
+  console.log("captured: meals-cafe");
+
   await browser.close();
 })();

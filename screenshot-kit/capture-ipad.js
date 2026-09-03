@@ -29,5 +29,21 @@ const BASE = "http://localhost:3001";
     await page.screenshot({ path: path.join(SHOT, `${t.name}.png`) });
     console.log(`captured: ${t.name}`);
   }
+
+  // カテゴリ一覧（食品DBの豊富さ）
+  await page.goto(`${BASE}/meals`, { waitUntil: "networkidle0", timeout: 30000 }).catch(() => {});
+  await new Promise((r) => setTimeout(r, 2000));
+  const found = await page.evaluate(() => {
+    const el = [...document.querySelectorAll("p")]
+      .filter((e) => e.textContent.trim().includes("カテゴリから選ぶ"))
+      .sort((a, b) => a.textContent.length - b.textContent.length)[0];
+    if (el) window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 30);
+    return !!el;
+  });
+  console.log("  ipad categories heading found:", found);
+  await new Promise((r) => setTimeout(r, 700));
+  await page.screenshot({ path: path.join(SHOT, "ipad-meals-categories.png") });
+  console.log("captured: ipad-meals-categories");
+
   await browser.close();
 })();
